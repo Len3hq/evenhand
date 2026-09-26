@@ -1,0 +1,12 @@
+# Required reviewers (CONTRIBUTING.md §5-6). One path pattern per line.
+# Person A: platform & security   Person B: judging   Person C: product & UI
+*                                   @Dannyamah @christian-obi @FrankChinedu
+/src/api/src/core/                  @Dannyamah @christian-obi @FrankChinedu
+/src/api/prisma/                    @Dannyamah @christian-obi @FrankChinedu
+/tests/api/isolation.e2e-spec.ts    @Dannyamah @christian-obi @FrankChinedu
+/docker/                            @Dannyamah @christian-obi @FrankChinedu
+/docker-compose.yml                 @Dannyamah @christian-obi @FrankChinedu
+/src/judging-engine/                @Dannyamah @christian-obi @FrankChinedu
+/src/api/src/modules/judging/       @Dannyamah @christian-obi @FrankChinedu
+/JUDGING.md                         @Dannyamah @christian-obi @FrankChinedu
+/src/web/                           @Dannyamah @christian-obi @FrankChinedu

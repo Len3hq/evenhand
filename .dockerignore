@@ -1,0 +1,17 @@
+# Keep the build context small and never ship host-built artefacts into images.
+**/node_modules
+**/dist
+**/.next
+**/coverage
+**/*.tsbuildinfo
+src/api/src/generated
+.git
+.github
+.cache
+.env
+.env.*
+docs
+tests
+acceptance-report.txt
+*.md
+!src/**/*.md

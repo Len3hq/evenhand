@@ -1,0 +1,14 @@
+node_modules
+dist
+.next
+coverage
+.cache
+src/api/src/generated
+src/api/prisma/migrations
+src/api/openapi.json
+src/web/src/lib/api/schema.d.ts
+package-lock.json
+data/fixtures.json
+acceptance-report.txt
+docs/planning
+src/web/next-env.d.ts

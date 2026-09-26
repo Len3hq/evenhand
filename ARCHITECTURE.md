@@ -1,0 +1,104 @@
+# Architecture
+
+Evenhand is three containers behind one public port. The API owns every rule; the web app is one of its clients; the judging maths is a pure library the API calls.
+
+```
+           browser                     curl / run.py / scripts
+              │ cookie: session              │ Authorization: Bearer <token>
+              ▼                              ▼
+ ┌──────────────────────────────── edge network ───────────────────────────────┐
+ │  web  :8080   Next.js 16 (standalone server)  ── the only published port     │
+ │               pages render on the server; /api/* is proxied to the api       │
+ └───────────────┬─────────────────────────────────────────────────────────────┘
+                 │  backend network (internal: no route to the internet)
+ ┌───────────────▼─────────────────────────────────────────────────────────────┐
+ │  api  :3001   NestJS 12                                                      │
+ │    ThrottlerGuard → SessionGuard → RoleGuard → route guards → ValidationPipe │
+ │    controllers (thin) → services (permission → deadline → write+audit → DTO) │
+ │    @evenhand/judging-engine (pure TS)       Prisma 7 client (pg adapter)     │
+ │  db   :5432   PostgreSQL 16 (volume pgdata)                                  │
+ └──────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Why this shape
+
+| Decision                                                    | Reason                                                                                                                                                                                                                                                                         |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **One origin** (`:8080`; Next rewrites `/api/*` to the API) | Cookies are same-origin (no CORS), and the browser, curl and the checker all use one `base_url`.                                                                                                                                                                               |
+| **API as the only authority**                               | "If I can curl another judge's scores, it is not isolation." Every permission is enforced in API services, so the UI cannot get it wrong.                                                                                                                                      |
+| **`db` and `api` on an internal network**                   | "No external API at runtime" is guaranteed by construction: the API cannot reach the internet even if someone adds code that tries. Verified: an egress attempt from the api container fails with `EAI_AGAIN`, and the stack still boots, migrates, seeds and passes `run.py`. |
+| **Pure judging engine** (`src/judging-engine`)              | The part that decides who wins is deterministic, has no dependencies and is unit-tested without a database. It can be reviewed, and reused in a verify CLI, on its own.                                                                                                        |
+| **NestJS + Next.js + Prisma**                               | The team's strongest stack ([ADR](docs/decisions/20260926-1300-a-stack-nestjs-nextjs.md)). Nest's guards and modules suit layered authorisation; Next renders pages on the server.                                                                                             |
+
+## Request pipeline
+
+Every API request passes the same layers, in this order (registered in `core/core.module.ts`):
+
+1. **ThrottlerGuard**: per-IP rate limits. `default` (300/min) everywhere; `auth` (10/min) on routes marked `@AuthRateLimit()` (login, register). Over the limit → 429.
+2. **SessionGuard**: resolves the caller from `Authorization: Bearer` (hashed `api_tokens`) or the `session` cookie (hashed `sessions`) into an `Actor` with all their event roles.
+   - Cookie-authenticated **writes** must carry an allowed `Origin` (or `Referer`): the CSRF defence. Bearer tokens are exempt; they are not ambient credentials.
+   - Demo tokens are refused unless `DEMO_MODE=true`.
+   - Non-public route with no valid caller → **401 JSON**. There are no redirects anywhere under `/api`.
+3. **RoleGuard**: `@RequireRole('JUDGE')` etc.; the caller must hold the role in _some_ event. Wrong role → 403.
+4. **Route guards**: e.g. `SubmissionsOpenGuard` resolves `:eventRef` and refuses with **403 `submissions_closed`** once `now ≥ submissions_close`. Guards run before pipes, so a closed event refuses before the body is even validated.
+5. **ValidationPipe**: DTO validation; unknown fields rejected (400).
+6. **Service**: permission for _this_ event or object (**deny first**: decided from the actor before querying the object), deadline again where relevant, then the write and its audit row in one transaction, then a DTO.
+7. **AllExceptionsFilter**: every error becomes `{ statusCode, error, message }`; unexpected errors are logged and answered with a generic 500.
+
+### Deny first, concretely
+
+`GET /api/judges/:judgeRef/scores`, as judge B asking for judge A:
+
+- The caller is not that judge and is not an organiser anywhere → **403 immediately**. The database is never asked whether `jdg_24` exists, so the answer for a real judge and a made-up one is byte-identical (tested).
+- The caller is an organiser → the judge is looked up; allowed only if the caller organises _that judge's_ event (an organiser of another event gets 403, tested).
+
+## Start-up (api container)
+
+`docker/api-entrypoint.sh`:
+
+1. `prisma migrate deploy`, retried up to 10× (compose already waits for the db healthcheck; the retry covers the last gap).
+2. `node dist/cli/cli.js seed`: imports `data/fixtures.json` (idempotent: finds before it creates) and, in demo mode, the demo accounts, the open demo event and fixed tokens; prints the logins.
+3. `exec node dist/main.js`.
+
+`web` starts only when `api` reports healthy (`/api/healthz` checks the database).
+
+## Offline and reproducible builds
+
+- Base images are pinned by **multi-arch digest** (amd64 + arm64).
+- Network is used only while building (`npm ci`, `apt-get openssl`). At runtime nothing calls out: no web fonts (system font stack), no image optimiser (`images.unoptimized`), telemetry off, no CDN (Swagger UI assets are served locally).
+- Prisma: the CLI is a runtime dependency (never fetched with `npx`), the client is generated at build time, and the Dockerfile **fails the build** if the schema engine for the runtime's OpenSSL is missing. Otherwise the container would try to download one at start-up. We hit exactly this bug once (details in the Dockerfile).
+- `next build` needs neither the API nor the database: data pages are rendered per request.
+
+## Configuration
+
+Environment variables, validated at start-up (`core/config.ts`; a bad value stops the process with a clear message):
+
+| Variable                                                  | Default                       | Meaning                                                        |
+| --------------------------------------------------------- | ----------------------------- | -------------------------------------------------------------- |
+| `DATABASE_URL`                                            | – (required)                  | Postgres connection string                                     |
+| `PORT`                                                    | `3001`                        | API port                                                       |
+| `DEMO_MODE`                                               | `false` (compose sets `true`) | Seed demo tokens and passwords, and accept demo tokens         |
+| `DEMO_PASSWORD`                                           | `evenhand-demo`               | Password of every seeded account in demo mode                  |
+| `ALLOWED_ORIGINS`                                         | `http://localhost:8080`       | Origins allowed to make cookie-authenticated writes            |
+| `RATE_LIMIT_DEFAULT_PER_MIN` / `RATE_LIMIT_LOGIN_PER_MIN` | `300` / `10`                  | Per-IP limits                                                  |
+| `SESSION_TTL_HOURS`                                       | `168`                         | Browser session lifetime                                       |
+| `UPLOADS_DIR`                                             | `./uploads`                   | File uploads (volume `uploads` in Docker)                      |
+| `FIXTURES_PATH`                                           | `data/fixtures.json`          | Used by `cli seed` when `--fixtures` is not given              |
+| `API_REWRITE_TARGET` (web, **build time**)                | `http://localhost:3001`       | Where Next proxies `/api/*`. Rewrites are fixed at build time. |
+| `API_INTERNAL_URL` (web, run time)                        | `http://localhost:3001`       | Where server components call the API                           |
+
+## Testing
+
+| Layer      | Where                                                         | What                                                                                                                                                                                  |
+| ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit       | `src/**/**.spec.ts` (Vitest)                                  | Engine maths, fixture parsing, duplicate detection, deadline boundary                                                                                                                 |
+| End-to-end | `tests/api/*.e2e-spec.ts` (Vitest + supertest, real Postgres) | The **isolation matrix** (7 actors × every protected route), cookie/CSRF/demo-mode/rate-limit behaviour, deadline with a frozen clock, hand-written SQL constraints, seed idempotency |
+| Acceptance | `tests/acceptance/run.sh`                                     | The organisers' `run.py` against the Docker stack                                                                                                                                     |
+
+`npm run check` runs everything except acceptance; CI runs acceptance too.
+
+## Known trade-offs
+
+- **Rate limiting trusts `X-Forwarded-For` from private-range proxies.** Next's proxy keeps a client-supplied `X-Forwarded-For`, so a client can rotate that header to dodge per-IP limits. For a public deployment, put a reverse proxy in front that overwrites it (see the [threat model](JUDGING.md#threat-model)).
+- **Rate-limit counters are in memory**: correct for one API instance; several instances would need a shared store.
+- **ESLint 9 is end-of-life**, but Next's lint plugins do not support ESLint 10 yet ([ADR](docs/decisions/20260926-1330-a-dependency-pins.md)).

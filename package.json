@@ -1,0 +1,51 @@
+{
+  "name": "evenhand",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hostable hackathon submission and judging portal whose rankings come with receipts.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "src/judging-engine",
+    "src/api",
+    "src/web"
+  ],
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "build:engine": "npm run build -w @evenhand/judging-engine",
+    "db:up": "docker compose -f docker-compose.yml -f compose.dev.yml up -d --wait db",
+    "db:down": "docker compose -f docker-compose.yml -f compose.dev.yml stop db",
+    "db:reset": "npm run db:up && npm run db:reset -w @evenhand/api",
+    "dev": "npm run db:up && npm run build:engine && concurrently -k -n engine,api,web -c yellow,cyan,magenta \"npm run dev -w @evenhand/judging-engine\" \"npm run dev -w @evenhand/api\" \"npm run dev -w @evenhand/web\"",
+    "build": "npm run build --workspaces",
+    "lint": "eslint . --max-warnings=0 && npm run lint -w @evenhand/web",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run build:engine && npm run typecheck --workspaces",
+    "test": "npm run build:engine && npm run test --workspaces --if-present",
+    "test:e2e": "npm run build:engine && npm run db:up && npm run test:e2e -w @evenhand/api",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run test:e2e",
+    "gen:api": "npm run openapi -w @evenhand/api && openapi-typescript src/api/openapi.json -o src/web/src/lib/api/schema.d.ts",
+    "cli": "npm run cli -w @evenhand/api --",
+    "acceptance": "sh tests/acceptance/run.sh"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "concurrently": "10.0.5",
+    "eslint": "9.39.5",
+    "globals": "17.12.0",
+    "openapi-typescript": "7.13.0",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.1"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    },
+    "mysql2": "3.24.4"
+  }
+}

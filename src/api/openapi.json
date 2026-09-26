@@ -1,0 +1,860 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/healthz": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Liveness and database readiness. Used by the compose healthcheck.",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Email + password login. Sets the httpOnly `session` cookie and returns the user.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Creates an account (no event roles yet) and logs it in.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Ends the current browser session.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "AuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The logged-in user and their roles per event. 401 when not logged in.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "operationId": "GalleryController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Free-text search over title, tagline and summary (case-insensitive).",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "track",
+            "required": false,
+            "in": "query",
+            "description": "Only projects in this track (internal id or fixture id, e.g. trk_01).",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "tag",
+            "required": false,
+            "in": "query",
+            "description": "Only projects with this tech tag.",
+            "schema": {
+              "maxLength": 50,
+              "type": "string"
+            }
+          },
+          {
+            "name": "event",
+            "required": false,
+            "in": "query",
+            "description": "Only projects in this event (id, fixture id or slug).",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Public gallery with search and filters. Acceptance checks 1 and 2 read this route.",
+        "tags": [
+          "gallery"
+        ]
+      }
+    },
+    "/api/projects/{ref}": {
+      "get": {
+        "operationId": "GalleryController_get",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "One public project, by internal id or fixture id (e.g. prj_01).",
+        "tags": [
+          "gallery"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/submissions": {
+      "post": {
+        "operationId": "SubmissionsController_create",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubmissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create your team's draft. Refused with 403 `submissions_closed` once the event's\ndeadline has passed, before the body is validated (acceptance check 3).",
+        "tags": [
+          "submissions"
+        ]
+      }
+    },
+    "/api/judge/scores": {
+      "get": {
+        "operationId": "JudgingController_ownScores",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreListDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Your own scores. Judges only: participants get 403 (acceptance checks 4 and 6).",
+        "tags": [
+          "judging"
+        ]
+      }
+    },
+    "/api/judges/{judgeRef}/scores": {
+      "get": {
+        "operationId": "JudgingController_judgeScores",
+        "parameters": [
+          {
+            "name": "judgeRef",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreListDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "One judge's scores, by internal id or fixture id (e.g. jdg_24). Only that judge, the\nevent's organisers and admins may read them; any other judge gets 403 (acceptance check 5).",
+        "tags": [
+          "judging"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/export/scores.csv": {
+      "get": {
+        "operationId": "JudgingController_exportScores",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Every review in the event as CSV. Organisers and admins only (acceptance check 7).",
+        "tags": [
+          "judging"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Evenhand API",
+    "description": "Every action the UI takes is available here. Authenticate with a bearer token (`Authorization: Bearer …`) or the `session` cookie set by POST /api/auth/login. Errors are always `{ statusCode, error, message }`.",
+    "version": "0.1.0",
+    "contact": {},
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/license/mit"
+    }
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      },
+      "cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session"
+      }
+    },
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "RoleDto": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "PARTICIPANT",
+              "JUDGE",
+              "ORGANIZER"
+            ]
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fixture id for imported judges, e.g. jdg_24."
+          }
+        },
+        "required": [
+          "eventId",
+          "role",
+          "externalId"
+        ]
+      },
+      "MeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isAdmin": {
+            "type": "boolean"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoleDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "isAdmin",
+          "roles"
+        ]
+      },
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "password": {
+            "type": "string",
+            "description": "At least 10 characters.",
+            "minLength": 10,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "email",
+          "name",
+          "password"
+        ]
+      },
+      "TrackRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "name"
+        ]
+      },
+      "ProjectSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fixture id (e.g. prj_01) when imported from fixtures.json."
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "tagline": {
+            "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "techTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "track": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TrackRefDto"
+              }
+            ]
+          },
+          "teamName": {
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "eventId",
+          "title",
+          "tagline",
+          "summary",
+          "thumbnailUrl",
+          "techTags",
+          "track",
+          "teamName",
+          "submittedAt"
+        ]
+      },
+      "ProjectPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectSummaryDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ]
+      },
+      "ProjectDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fixture id (e.g. prj_01) when imported from fixtures.json."
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "tagline": {
+            "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "techTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "track": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TrackRefDto"
+              }
+            ]
+          },
+          "teamName": {
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "repoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "demoVideoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "liveUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageUrls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "eventId",
+          "title",
+          "tagline",
+          "summary",
+          "thumbnailUrl",
+          "techTags",
+          "track",
+          "teamName",
+          "submittedAt",
+          "description",
+          "repoUrl",
+          "demoVideoUrl",
+          "liveUrl",
+          "imageUrls"
+        ]
+      },
+      "CreateSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "tagline": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "summary": {
+            "type": "string",
+            "description": "One-paragraph summary shown on gallery cards.",
+            "maxLength": 500
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description (Markdown is rendered as plain text for now).",
+            "maxLength": 20000
+          },
+          "repoUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "demoVideoUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "liveUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "techTags": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          "track": {
+            "type": "string",
+            "description": "Track id or fixture id (e.g. trk_01).",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "SubmissionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "teamId",
+          "title",
+          "status",
+          "createdAt"
+        ]
+      },
+      "JudgeRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Internal judge id (the judge's EventRole id)."
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fixture id, e.g. jdg_24."
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "name"
+        ]
+      },
+      "ProjectRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "title"
+        ]
+      },
+      "ScoreDto": {
+        "type": "object",
+        "properties": {
+          "reviewId": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "judge": {
+            "$ref": "#/components/schemas/JudgeRefDto"
+          },
+          "project": {
+            "$ref": "#/components/schemas/ProjectRefDto"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "FINAL"
+            ]
+          },
+          "superseded": {
+            "type": "boolean",
+            "description": "True when the review belonged to a merged duplicate; excluded from ranking."
+          },
+          "comment": {
+            "type": "string"
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Raw criterion values keyed by criterion key."
+          },
+          "weightedScore": {
+            "type": "number",
+            "nullable": true,
+            "description": "Weighted score on the criterion scale; null while the review is incomplete."
+          }
+        },
+        "required": [
+          "reviewId",
+          "eventId",
+          "judge",
+          "project",
+          "status",
+          "superseded",
+          "comment",
+          "values",
+          "weightedScore"
+        ]
+      },
+      "ScoreListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScoreDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      }
+    }
+  }
+}

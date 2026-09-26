@@ -1,0 +1,530 @@
+// Evenhand data model. The prose version, with the reasoning behind each constraint,
+// is DATA-MODEL.md at the repo root. Change both together.
+//
+// Conventions
+// - Tables and columns are snake_case in SQL (@@map / @map); fields are camelCase in TypeScript.
+// - Primary keys are UUIDv7 (time-ordered, index-friendly). Rows imported from fixtures.json
+//   also keep their fixture id in `external_id`, so exports and checker URLs line up.
+// - Constraints Prisma cannot express (partial unique index, CHECK/triggers, the append-only
+//   audit log) are hand-written SQL in the migrations. Each has a test proving it fires.
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Identity ────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  /// Stored lower-cased; unique across the platform.
+  email        String   @unique
+  name         String
+  /// argon2id. Null means the account cannot log in with a password yet.
+  passwordHash String?  @map("password_hash")
+  /// Platform-wide administrator. Event roles live in EventRole.
+  isAdmin      Boolean  @default(false) @map("is_admin")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  sessions     Session[]
+  apiTokens    ApiToken[]
+  eventRoles   EventRole[]
+  teamMembers  TeamMember[]
+  auditEntries AuditLog[]
+
+  @@map("users")
+}
+
+/// Browser session. The cookie holds a random token; only its SHA-256 is stored.
+model Session {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  tokenHash  String   @unique @map("token_hash")
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// Bearer token for API clients and scripts. Only the SHA-256 is stored.
+/// Demo tokens (fixed values printed at boot) are refused unless DEMO_MODE=true.
+model ApiToken {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  label     String
+  isDemo    Boolean   @default(false) @map("is_demo")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("api_tokens")
+}
+
+// ─── Events ──────────────────────────────────────────────────────────────────
+
+model Event {
+  id                 String    @id @default(uuid(7)) @db.Uuid
+  externalId         String?   @unique @map("external_id")
+  slug               String    @unique
+  name               String
+  opensAt            DateTime? @map("opens_at") @db.Timestamptz(3)
+  /// Submissions are accepted only while now < submissions_close (server clock, UTC).
+  submissionsClose   DateTime  @map("submissions_close") @db.Timestamptz(3)
+  judgingClose       DateTime? @map("judging_close") @db.Timestamptz(3)
+  resultsPublishedAt DateTime? @map("results_published_at") @db.Timestamptz(3)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tracks          Track[]
+  prizes          Prize[]
+  roles           EventRole[]
+  criteria        Criterion[]
+  teams           Team[]
+  teamMembers     TeamMember[]
+  submissions     Submission[]
+  customQuestions CustomQuestion[]
+  duplicateFlags  DuplicateFlag[]
+  rankingRuns     RankingRun[]
+  auditEntries    AuditLog[]
+
+  @@map("events")
+}
+
+model Track {
+  id         String  @id @default(uuid(7)) @db.Uuid
+  eventId    String  @map("event_id") @db.Uuid
+  externalId String? @map("external_id")
+  name       String
+
+  event       Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  prizes      Prize[]
+  judgeTracks JudgeTrack[]
+  submissions Submission[]
+
+  @@unique([eventId, externalId])
+  @@unique([eventId, name])
+  @@map("tracks")
+}
+
+model Prize {
+  id          String  @id @default(uuid(7)) @db.Uuid
+  eventId     String  @map("event_id") @db.Uuid
+  /// Null = an overall prize; set = a prize for one track.
+  trackId     String? @map("track_id") @db.Uuid
+  name        String
+  description String?
+
+  event Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  track Track? @relation(fields: [trackId], references: [id], onDelete: SetNull)
+
+  @@index([eventId])
+  @@map("prizes")
+}
+
+enum EventRoleKind {
+  PARTICIPANT
+  JUDGE
+  ORGANIZER
+
+  @@map("event_role_kind")
+}
+
+/// Roles are per event: the same person can judge one event and compete in another.
+/// Visitor = no role; admin = users.is_admin.
+model EventRole {
+  id         String        @id @default(uuid(7)) @db.Uuid
+  userId     String        @map("user_id") @db.Uuid
+  eventId    String        @map("event_id") @db.Uuid
+  role       EventRoleKind
+  /// Fixture judge id (e.g. jdg_24) for judges imported from fixtures.json.
+  externalId String?       @map("external_id")
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event       Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  judgeTracks JudgeTrack[]
+  assignments Assignment[]
+  conflicts   ConflictOfInterest[]
+
+  @@unique([userId, eventId, role])
+  @@unique([eventId, externalId])
+  @@index([eventId, role])
+  @@map("event_roles")
+}
+
+/// The tracks a judge may see and score (track isolation).
+model JudgeTrack {
+  judgeRoleId String @map("judge_role_id") @db.Uuid
+  trackId     String @map("track_id") @db.Uuid
+
+  judgeRole EventRole @relation(fields: [judgeRoleId], references: [id], onDelete: Cascade)
+  track     Track     @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@id([judgeRoleId, trackId])
+  @@map("judge_tracks")
+}
+
+/// One rubric criterion. Weights are relative (normalised by their sum when scoring).
+model Criterion {
+  id      String @id @default(uuid(7)) @db.Uuid
+  eventId String @map("event_id") @db.Uuid
+  key     String
+  label   String
+  weight  Float  @default(1)
+  min     Int    @default(1)
+  max     Int    @default(5)
+  order   Int    @default(0)
+
+  event  Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  scores CriterionScore[]
+
+  @@unique([eventId, key])
+  @@map("criteria")
+}
+
+// ─── Teams and submissions ───────────────────────────────────────────────────
+
+model Team {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  eventId    String   @map("event_id") @db.Uuid
+  externalId String?  @map("external_id")
+  name       String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  event       Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  members     TeamMember[]
+  invites     Invite[]
+  submissions Submission[]
+  conflicts   ConflictOfInterest[]
+
+  @@unique([eventId, externalId])
+  @@map("teams")
+}
+
+/// event_id is denormalised from the team so the database can enforce
+/// "a user is on at most one team per event" with a plain unique constraint.
+model TeamMember {
+  teamId   String   @map("team_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  eventId  String   @map("event_id") @db.Uuid
+  joinedAt DateTime @default(now()) @map("joined_at") @db.Timestamptz(3)
+
+  team  Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, userId])
+  @@unique([eventId, userId])
+  @@map("team_members")
+}
+
+/// Invite link. The URL carries a random token; only its SHA-256 is stored.
+model Invite {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  teamId    String   @map("team_id") @db.Uuid
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  maxUses   Int      @default(4) @map("max_uses")
+  uses      Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("invites")
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+
+  @@map("submission_status")
+}
+
+enum Eligibility {
+  ELIGIBLE
+  DISQUALIFIED
+
+  @@map("eligibility")
+}
+
+/// A project submission. One live submission per team per event is enforced by a partial
+/// unique index (migration SQL) on (event_id, team_id) WHERE superseded_by_id IS NULL AND
+/// NOT duplicate_hold. `duplicate_hold` marks the older copy of an imported duplicate that is
+/// waiting for the organiser's decision (BUILD-PLAN decisions 4–7, ADR 0004).
+model Submission {
+  id               String           @id @default(uuid(7)) @db.Uuid
+  eventId          String           @map("event_id") @db.Uuid
+  teamId           String           @map("team_id") @db.Uuid
+  trackId          String?          @map("track_id") @db.Uuid
+  externalId       String?          @map("external_id")
+  /// Position in fixtures.json; the gallery's default order (checker check 2).
+  seedOrder        Int?             @map("seed_order")
+  title            String
+  tagline          String?
+  summary          String?
+  description      String?
+  thumbnailUrl     String?          @map("thumbnail_url")
+  repoUrl          String?          @map("repo_url")
+  demoVideoUrl     String?          @map("demo_video_url")
+  liveUrl          String?          @map("live_url")
+  techTags         String[]         @default([]) @map("tech_tags")
+  status           SubmissionStatus @default(DRAFT)
+  eligibility      Eligibility      @default(ELIGIBLE)
+  disqualifyReason String?          @map("disqualify_reason")
+  submittedAt      DateTime?        @map("submitted_at") @db.Timestamptz(3)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  supersededById   String?          @map("superseded_by_id") @db.Uuid
+  duplicateHold    Boolean          @default(false) @map("duplicate_hold")
+
+  event          Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  team           Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  track          Track?            @relation(fields: [trackId], references: [id], onDelete: SetNull)
+  supersededBy   Submission?       @relation("Supersedes", fields: [supersededById], references: [id], onDelete: SetNull)
+  supersedes     Submission[]      @relation("Supersedes")
+  images         SubmissionImage[]
+  answers        Answer[]
+  assignments    Assignment[]
+  keptFlags      DuplicateFlag[]   @relation("DuplicateKept")
+  duplicateFlags DuplicateFlag[]   @relation("DuplicateSuperseded")
+  movedReviews   Review[]          @relation("ReviewOriginalSubmission")
+  rankingRows    RankingRow[]
+
+  @@unique([eventId, externalId])
+  @@index([eventId, status, eligibility])
+  @@index([teamId])
+  @@map("submissions")
+}
+
+model SubmissionImage {
+  id           String @id @default(uuid(7)) @db.Uuid
+  submissionId String @map("submission_id") @db.Uuid
+  url          String
+  order        Int    @default(0)
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@map("submission_images")
+}
+
+/// Organiser-defined question every submission answers.
+model CustomQuestion {
+  id       String  @id @default(uuid(7)) @db.Uuid
+  eventId  String  @map("event_id") @db.Uuid
+  prompt   String
+  required Boolean @default(false)
+  order    Int     @default(0)
+
+  event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  answers Answer[]
+
+  @@index([eventId])
+  @@map("custom_questions")
+}
+
+model Answer {
+  submissionId String @map("submission_id") @db.Uuid
+  questionId   String @map("question_id") @db.Uuid
+  value        String
+
+  submission Submission     @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question   CustomQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([submissionId, questionId])
+  @@map("answers")
+}
+
+enum DuplicateReason {
+  SAME_TEAM
+  SAME_REPO
+  SAME_TITLE
+
+  @@map("duplicate_reason")
+}
+
+enum DuplicateStatus {
+  PENDING
+  CONFIRMED
+  DISMISSED
+
+  @@map("duplicate_status")
+}
+
+/// A suspected duplicate: `kept` is the later submission, `superseded` the earlier one.
+/// Confirming sets superseded.superseded_by_id = kept and moves unique reviews across.
+model DuplicateFlag {
+  id           String          @id @default(uuid(7)) @db.Uuid
+  eventId      String          @map("event_id") @db.Uuid
+  keptId       String          @map("kept_id") @db.Uuid
+  supersededId String          @map("superseded_id") @db.Uuid
+  reason       DuplicateReason
+  status       DuplicateStatus @default(PENDING)
+  decidedById  String?         @map("decided_by_id") @db.Uuid
+  decidedAt    DateTime?       @map("decided_at") @db.Timestamptz(3)
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  event      Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  kept       Submission @relation("DuplicateKept", fields: [keptId], references: [id], onDelete: Cascade)
+  superseded Submission @relation("DuplicateSuperseded", fields: [supersededId], references: [id], onDelete: Cascade)
+
+  @@unique([keptId, supersededId])
+  @@map("duplicate_flags")
+}
+
+// ─── Judging ─────────────────────────────────────────────────────────────────
+
+/// A judge may not be assigned to a team they have a conflict with.
+model ConflictOfInterest {
+  judgeRoleId String @map("judge_role_id") @db.Uuid
+  teamId      String @map("team_id") @db.Uuid
+  reason      String?
+
+  judgeRole EventRole @relation(fields: [judgeRoleId], references: [id], onDelete: Cascade)
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([judgeRoleId, teamId])
+  @@map("conflicts_of_interest")
+}
+
+model Assignment {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  judgeRoleId   String   @map("judge_role_id") @db.Uuid
+  submissionId  String   @map("submission_id") @db.Uuid
+  /// Which release wave this belongs to, e.g. "fixture" or "batch-2".
+  batch         String
+  /// Position in this judge's (shuffled) queue.
+  queuePosition Int      @map("queue_position")
+  assignedAt    DateTime @default(now()) @map("assigned_at") @db.Timestamptz(3)
+
+  judgeRole  EventRole  @relation(fields: [judgeRoleId], references: [id], onDelete: Cascade)
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  review     Review?
+
+  @@unique([judgeRoleId, submissionId])
+  @@index([submissionId])
+  @@map("assignments")
+}
+
+enum ReviewStatus {
+  DRAFT
+  FINAL
+
+  @@map("review_status")
+}
+
+/// One review per assignment. `superseded` reviews (from a merged duplicate) are kept for the
+/// record but excluded from ranking.
+model Review {
+  id                   String       @id @default(uuid(7)) @db.Uuid
+  assignmentId         String       @unique @map("assignment_id") @db.Uuid
+  status               ReviewStatus @default(DRAFT)
+  comment              String       @default("")
+  superseded           Boolean      @default(false)
+  /// Set when a duplicate merge moved this review from another submission.
+  originalSubmissionId String?      @map("original_submission_id") @db.Uuid
+  /// Null for reviews imported from fixtures.json, which carry no timestamps.
+  submittedAt          DateTime?    @map("submitted_at") @db.Timestamptz(3)
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  assignment         Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  originalSubmission Submission?      @relation("ReviewOriginalSubmission", fields: [originalSubmissionId], references: [id], onDelete: SetNull)
+  scores             CriterionScore[]
+
+  @@map("reviews")
+}
+
+/// A value inside [criterion.min, criterion.max]; enforced by a trigger in the migration.
+model CriterionScore {
+  reviewId    String @map("review_id") @db.Uuid
+  criterionId String @map("criterion_id") @db.Uuid
+  value       Int
+
+  review    Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  criterion Criterion @relation(fields: [criterionId], references: [id], onDelete: Restrict)
+
+  @@id([reviewId, criterionId])
+  @@map("criterion_scores")
+}
+
+// ─── Results ─────────────────────────────────────────────────────────────────
+
+/// A frozen ranking computation: its inputs hash, parameters and outputs (the Ranking Receipt).
+model RankingRun {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  eventId     String    @map("event_id") @db.Uuid
+  method      String
+  /// Weights, λ_b, λ_q and any other parameter needed to reproduce the run.
+  params      Json
+  inputsHash  String    @map("inputs_hash")
+  outputHash  String    @map("output_hash")
+  createdById String?   @map("created_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  publishedAt DateTime? @map("published_at") @db.Timestamptz(3)
+
+  event Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  rows  RankingRow[]
+
+  @@index([eventId])
+  @@map("ranking_runs")
+}
+
+model RankingRow {
+  runId        String @map("run_id") @db.Uuid
+  submissionId String @map("submission_id") @db.Uuid
+  rawMean      Float  @map("raw_mean")
+  normalized   Float
+  posteriorSd  Float  @map("posterior_sd")
+  rank         Int
+  tieGroup     Int    @map("tie_group")
+  nReviews     Int    @map("n_reviews")
+  reason       String
+
+  run        RankingRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@id([runId, submissionId])
+  @@map("ranking_rows")
+}
+
+// ─── Audit ───────────────────────────────────────────────────────────────────
+
+/// Append-only. There is no update or delete path in code, and a trigger (migration SQL)
+/// rejects UPDATE and DELETE at the database level.
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  at         DateTime @default(now()) @db.Timestamptz(3)
+  actorId    String?  @map("actor_id") @db.Uuid
+  eventId    String?  @map("event_id") @db.Uuid
+  /// domain.verb, e.g. "auth.login", "submission.updated". Listed in core/audit-actions.ts.
+  action     String
+  targetType String   @map("target_type")
+  targetId   String?  @map("target_id")
+  before     Json?
+  after      Json?
+  ip         String?
+
+  /// RESTRICT, not SET NULL: a cascade would UPDATE audit rows, which the trigger forbids.
+  /// Users and events with audit history are therefore never hard-deleted.
+  actor User?  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  event Event? @relation(fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@index([eventId, at])
+  @@index([actorId])
+  @@map("audit_log")
+}

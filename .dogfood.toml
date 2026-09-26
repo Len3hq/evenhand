@@ -1,0 +1,19 @@
+[portal]
+base_url = "http://localhost:8080"
+
+[tiers]
+claimed = ["T1", "T2"]
+pitch = "A self-hostable hackathon portal whose rankings come with receipts: weighted rubrics, bias-corrected scores, and judge isolation that survives a curl."
+
+[auth]
+organizer   = "Authorization: Bearer dev-organizer-7f2a"
+judge_a     = "Authorization: Bearer dev-judge-a-91bc"
+judge_b     = "Authorization: Bearer dev-judge-b-44de"
+participant = "Authorization: Bearer dev-participant-2e88"
+
+[routes]
+gallery      = "/api/projects"
+submit       = "/api/events/evt_01/submissions"
+judge_scores = "/api/judge/scores"
+peer_scores  = "/api/judges/jdg_24/scores"
+csv_export   = "/api/events/evt_01/export/scores.csv"
