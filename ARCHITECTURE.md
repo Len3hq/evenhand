@@ -22,6 +22,8 @@ Evenhand is three containers behind one public port. The API owns every rule; th
 
 ## Why this shape
 
+Each decision below links to its record where one exists; all of them are in [`docs/decisions/`](docs/decisions/), one file per decision, written when it was made.
+
 | Decision                                                    | Reason                                                                                                                                                                                                                                                                         |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **One origin** (`:8080`; Next rewrites `/api/*` to the API) | Cookies are same-origin (no CORS), and the browser, curl and the checker all use one `base_url`.                                                                                                                                                                               |
@@ -57,8 +59,10 @@ Every API request passes the same layers, in this order (registered in `core/cor
 `docker/api-entrypoint.sh`:
 
 1. `prisma migrate deploy`, retried up to 10× (compose already waits for the db healthcheck; the retry covers the last gap).
-2. `node dist/cli/cli.js seed`: imports `data/fixtures.json` (idempotent: finds before it creates) and, in demo mode, the demo accounts, the open demo event and fixed tokens; prints the logins.
+2. `node dist/cli/cli.js seed`: imports `data/fixtures.json` (idempotent: finds before it creates) and, in demo mode, the demo accounts, the open demo event and fixed tokens; prints the logins. Skipped when `SEED_FIXTURES=false`, as for a real event.
 3. `exec node dist/main.js`.
+
+A real deployment has no default admin and no default password. The first admin is created from the server's shell with `cli create-admin` (README, "Running a real event"): whoever can run commands in the container already controls the database, so the shell is the one place a bootstrap credential adds no new attack surface.
 
 `web` starts only when `api` reports healthy (`/api/healthz` checks the database).
 
@@ -84,6 +88,7 @@ Environment variables, validated at start-up (`core/config.ts`; a bad value stop
 | `SESSION_TTL_HOURS`                                       | `168`                         | Browser session lifetime                                       |
 | `UPLOADS_DIR`                                             | `./uploads`                   | File uploads (volume `uploads` in Docker)                      |
 | `FIXTURES_PATH`                                           | `data/fixtures.json`          | Used by `cli seed` when `--fixtures` is not given              |
+| `SEED_FIXTURES` (api container)                           | `true`                        | Import `fixtures.json` on start; `false` for a real event      |
 | `API_REWRITE_TARGET` (web, **build time**)                | `http://localhost:3001`       | Where Next proxies `/api/*`. Rewrites are fixed at build time. |
 | `API_INTERNAL_URL` (web, run time)                        | `http://localhost:3001`       | Where server components call the API                           |
 

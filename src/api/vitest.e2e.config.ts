@@ -10,6 +10,20 @@ const testDatabaseUrl =
 // global-setup.ts runs in this (main) process and reads it from here.
 process.env.TEST_DATABASE_URL = testDatabaseUrl;
 
+const e2eEnv = {
+  DATABASE_URL: testDatabaseUrl,
+  DEMO_MODE: 'true',
+  DEMO_PASSWORD: 'evenhand-demo',
+  ALLOWED_ORIGINS: 'http://localhost:8080',
+  // High limits so the suite itself is never throttled; the rate-limit test lowers them.
+  RATE_LIMIT_DEFAULT_PER_MIN: '10000',
+  RATE_LIMIT_LOGIN_PER_MIN: '10000',
+};
+// global-setup.ts seeds through the CLI from this process, so it needs the same settings as
+// the test workers; without them it seeds without demo data unless a local .env happens to
+// set DEMO_MODE (CI has no .env).
+Object.assign(process.env, e2eEnv);
+
 // End-to-end tests: the real Nest app against a real Postgres (TEST_DATABASE_URL, a
 // dedicated database whose name must end in _test). Files share it, so they run one at a time.
 export default defineConfig({
@@ -21,14 +35,6 @@ export default defineConfig({
     fileParallelism: false,
     testTimeout: 30_000,
     hookTimeout: 120_000,
-    env: {
-      DATABASE_URL: testDatabaseUrl,
-      DEMO_MODE: 'true',
-      DEMO_PASSWORD: 'evenhand-demo',
-      ALLOWED_ORIGINS: 'http://localhost:8080',
-      // High limits so the suite itself is never throttled; the rate-limit test lowers them.
-      RATE_LIMIT_DEFAULT_PER_MIN: '10000',
-      RATE_LIMIT_LOGIN_PER_MIN: '10000',
-    },
+    env: e2eEnv,
   },
 });

@@ -12,6 +12,8 @@ export const AUDIT_ACTIONS = [
   'submission.created',
   'submission.updated',
   'duplicate.flagged',
+  'user.admin_granted',
+  'user.password_reset',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

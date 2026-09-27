@@ -60,6 +60,23 @@ SKIP_UP=1 npm run acceptance  # against a stack that is already running
 
 The result is written to [`acceptance-report.txt`](acceptance-report.txt). The script downloads the official `run.py` into `.cache/` (it isn't ours, so it isn't committed) and reuses the cached copy when offline. Routes and test headers are in [`.dogfood.toml`](.dogfood.toml).
 
+## Verified
+
+Each claim below is checked by a command anyone can run, not asserted. Numbers are from the last run and are updated when they change.
+
+| Claim                                                          | Checked by                                                                                                                         | Result                                          |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| The organisers' checker passes                                 | `npm run acceptance` (official `run.py` against `docker compose up`)                                                               | 7 / 7 PASS                                      |
+| Roles are enforced by the API, not the UI                      | [`tests/api/isolation.e2e-spec.ts`](tests/api/isolation.e2e-spec.ts): every route × every role                                     | 7 routes × 7 roles, 49 expected status codes    |
+| A judge is refused before any lookup, so refusals leak nothing | Same file: a real and a non-existent judge get the same 403                                                                        | Pass                                            |
+| The deadline holds to the millisecond                          | [`tests/api/submissions.e2e-spec.ts`](tests/api/submissions.e2e-spec.ts): refused at the closing instant, 1 ms before gets through | Pass                                            |
+| The audit log cannot be edited or deleted, even with SQL       | [`tests/api/constraints.e2e-spec.ts`](tests/api/constraints.e2e-spec.ts): `UPDATE`, `DELETE`, `TRUNCATE` refused                   | Pass                                            |
+| The database and API have no route to the internet             | `docker compose exec api node -e "fetch('https://example.org').then(()=>console.log('online'),()=>console.log('offline'))"`        | `offline`                                       |
+| A backup restores exactly, and keeps the audit log append-only | Backup and restore commands below, restored into a second database and compared                                                    | Row counts identical; `UPDATE` on audit refused |
+| Everything else                                                | `npm run check`: format, lint, typecheck, unit and end-to-end tests                                                                | 24 unit + 85 end-to-end tests pass              |
+
+The REST API is described by an OpenAPI 3 document, [`src/api/openapi.json`](src/api/openapi.json), served with Swagger UI at <http://localhost:8080/api/docs> (works offline).
+
 ## What works today, honestly
 
 Status at the end of the bootstrap (Sat 26 Sep). Claims only what is tested.
@@ -80,7 +97,57 @@ Status at the end of the bootstrap (Sat 26 Sep). Claims only what is tested.
 | Bias-corrected ranking, Ranking Receipt, publish, Normalization Proof                      | ⏳ planned (see [JUDGING.md](JUDGING.md))     |
 | Community voting (T3), webhooks / certificates (T4)                                        | ❌ not planned for this event                 |
 
-Known limits are listed in [JUDGING.md → Threat model](JUDGING.md#threat-model) and the [decision records](docs/decisions/).
+## Limitations
+
+Written down so a reviewer does not have to find them. Features still being built are in the table above; these are limits of the design as it stands.
+
+- **No email.** Nothing is sent: team invite links are designed to be copied and shared by hand, and there is no password-reset email. An operator resets a password with `create-admin --reset-password` (below). Sending mail would mean an SMTP server, which the offline rule excludes from the default setup.
+- **Demo mode is insecure on purpose.** With `DEMO_MODE=true` (the compose default) the four test tokens and the shared password are public, so the checker and a first-time visitor can get in. [Turn it off](#running-a-real-event) for a real event.
+- **No TLS in the box.** The portal serves plain HTTP on :8080. Put a reverse proxy that terminates TLS in front of it for anything beyond a laptop.
+- **Per-IP rate limits can be dodged behind the bundled proxy.** Next.js passes on a client-supplied `X-Forwarded-For`; a reverse proxy in front should overwrite it ([threat model](JUDGING.md#threat-model)).
+- **One machine.** One Postgres, one API and one web container. Sized for a hackathon of hundreds of people, not a platform of many concurrent events.
+- **A database superuser can still rewrite history.** The audit log is append-only through triggers, which someone with superuser access can disable. Hash-chaining the log is not built.
+- **Times are UTC.** Deadlines are stored and enforced in UTC by the server's clock; a client's clock is never trusted.
+
+The reasoning behind each design choice is in the [decision records](docs/decisions/).
+
+## Running a real event
+
+The defaults are for a demo. For a real event, edit the `api` and `db` sections of `docker-compose.yml`:
+
+1. `DEMO_MODE: 'false'`: the public test tokens and the shared demo password stop working.
+2. `SEED_FIXTURES: 'false'`: the organisers' sample event is not imported.
+3. Replace the database password `evenhand` in both `POSTGRES_PASSWORD` and `DATABASE_URL`.
+4. `ALLOWED_ORIGINS`: the address people will use, e.g. `https://hack.example.org`.
+5. Put a TLS-terminating reverse proxy in front of port 8080 (see [Limitations](#limitations)).
+
+Then start it and create the first admin (a platform admin has organiser rights on every event):
+
+```sh
+docker compose up -d
+docker compose exec api node dist/cli/cli.js create-admin you@example.org --name "Your Name"
+```
+
+The password is printed once; store it. Run the same command on an existing account to make it an admin (its password is kept), or add `--reset-password` to issue a new one. Every grant is written to the audit log.
+
+## Backup and restore
+
+The whole portal state is the Postgres database. Back it up while running:
+
+```sh
+docker compose exec -T db pg_dump -U evenhand -d evenhand --format=custom > evenhand.dump
+```
+
+Restore onto a fresh stack (this **wipes** the current data):
+
+```sh
+docker compose down -v            # deletes the database volume
+docker compose up -d --wait db
+docker compose exec -T db pg_restore -U evenhand -d evenhand --no-owner < evenhand.dump
+docker compose up -d
+```
+
+The restored database keeps its migration history and its append-only audit log. Uploaded files live in the `uploads` volume; back that up too once uploads are in use.
 
 ## Development
 

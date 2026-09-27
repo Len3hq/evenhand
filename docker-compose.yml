@@ -47,6 +47,8 @@ services:
       # Set to "false" for a real event: demo tokens are then refused.
       DEMO_MODE: 'true'
       DEMO_PASSWORD: evenhand-demo
+      # Import the organisers' fixtures.json on start. "false" for a real event.
+      SEED_FIXTURES: 'true'
       ALLOWED_ORIGINS: http://localhost:8080
       RATE_LIMIT_DEFAULT_PER_MIN: '300'
       RATE_LIMIT_LOGIN_PER_MIN: '10'
