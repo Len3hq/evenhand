@@ -17,6 +17,8 @@ export const AUDIT_ACTIONS = [
   'user.password_reset',
   'event.created',
   'event.updated',
+  'organizer.added',
+  'organizer.removed',
   'track.created',
   'track.updated',
   'track.deleted',

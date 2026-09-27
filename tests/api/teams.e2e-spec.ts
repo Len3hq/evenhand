@@ -241,6 +241,42 @@ describe('invite links', () => {
   });
 });
 
+describe('my teams', () => {
+  it('lists the caller’s teams with their event and current submission', async () => {
+    const event = await openEvent();
+    const alice = await person();
+    const team = (await createTeam(event.slug, 'Listed', alice.headers)).body;
+    const empty = (await t.http().get('/api/me/teams').set(alice.headers)).body;
+    expect(empty).toEqual([
+      {
+        team: expect.objectContaining({ id: team.id, name: 'Listed', submissionId: null }),
+        event: expect.objectContaining({ id: event.id, slug: event.slug, submissionsOpen: true }),
+        submission: null,
+      },
+    ]);
+
+    const draft = await t
+      .http()
+      .post(`/api/events/${event.slug}/submissions`)
+      .set(alice.headers)
+      .send({ title: 'Listed project' });
+    const mine = (await t.http().get('/api/me/teams').set(alice.headers)).body;
+    expect(mine[0].submission).toEqual({
+      id: draft.body.id,
+      title: 'Listed project',
+      status: 'DRAFT',
+      submittedAt: null,
+    });
+  });
+
+  it('never shows someone else’s teams', async () => {
+    const event = await openEvent();
+    await createTeam(event.slug, 'Not yours', (await person()).headers);
+    const bob = await person();
+    expect((await t.http().get('/api/me/teams').set(bob.headers)).body).toEqual([]);
+  });
+});
+
 describe('the new team can submit', () => {
   it('lets a member of a team formed by invite create the team submission', async () => {
     const event = await openEvent();

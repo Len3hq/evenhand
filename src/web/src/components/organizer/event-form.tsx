@@ -5,7 +5,7 @@ import { type FormEvent, useState } from 'react';
 import { Button, ErrorState, Input, Label } from '@/components/ui';
 import { apiPatch, apiPost } from '@/lib/api/client';
 import type { Schemas } from '@/lib/api/types';
-import { fromInput, toInput } from './dates';
+import { fromInput, toInput } from '@/lib/dates';
 
 type Event = Schemas['EventDto'];
 

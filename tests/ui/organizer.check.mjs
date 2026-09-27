@@ -71,13 +71,32 @@ await step('add a prize for the track, then remove it', async () => {
   await page.selectOption('#new-prize-track', { label: 'Climate and energy' });
   await page.click('button:has-text("Add prize")');
   await page.locator('input[id$="-name"][value="Best climate tool"]').waitFor();
-  await page.click('li button:has-text("Remove") >> nth=-1');
+  await page.locator('li:has(input[value="Best climate tool"]) button:has-text("Remove")').click();
   await page.getByText('No prizes yet').waitFor();
 });
 
 await step('remove the track', async () => {
   await page.locator('li:has(input[id^="track-"]) button:has-text("Remove")').first().click();
   await page.getByText('No tracks yet').waitFor();
+});
+
+await step('appoint an organiser, then remove them', async () => {
+  // priya1 is the demo participant; she competes in the demo event, not in this one.
+  await page.fill('#new-organizer', 'priya1@example.org');
+  await page.click('button:has-text("Add organiser")');
+  await page.getByText('priya1@example.org').waitFor();
+  await page.locator('li:has-text("priya1@example.org") button:has-text("Remove")').click();
+  await page.getByText('priya1@example.org').waitFor({ state: 'detached' });
+});
+
+await step('an unknown email and the last organiser are refused with the API message', async () => {
+  await page.fill('#new-organizer', 'nobody@nowhere.test');
+  await page.click('button:has-text("Add organiser")');
+  await page
+    .getByText('No account uses nobody@nowhere.test. Ask them to register first.')
+    .waitFor();
+  await page.locator('li:has-text("(you)") button:has-text("Remove")').click();
+  await page.getByText('An event needs at least one organiser.').waitFor();
 });
 
 await step('the audit trail tells the story in sentences', async () => {
@@ -92,6 +111,8 @@ await step('the audit trail tells the story in sentences', async () => {
     'Demo Organizer added the prize "Best climate tool"',
     'Demo Organizer removed the prize "Best climate tool"',
     'Demo Organizer removed the track "Climate and energy"',
+    'Demo Organizer made "priya1@example.org" an organiser',
+    'Demo Organizer removed "priya1@example.org" as an organiser',
   ]) {
     if (!text.includes(s)) throw new Error(`missing: ${s}`);
   }

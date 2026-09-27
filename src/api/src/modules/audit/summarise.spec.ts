@@ -50,6 +50,12 @@ describe('audit summaries', () => {
     expect(text).toContain('…');
   });
 
+  it('names the person appointed as an organiser', () => {
+    expect(
+      summarise({ action: 'organizer.added', before: null, after: {} }, 'Ada', 'ben@x.test'),
+    ).toBe('Ada made "ben@x.test" an organiser');
+  });
+
   it('says "the system" for the seed and command line', () => {
     expect(
       summarise({ action: 'fixtures.imported', before: null, after: {} }, null, 'Sample'),

@@ -10,6 +10,8 @@ import type { Schemas } from '@/lib/api/types';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Gallery' };
 
+const select = 'rounded-md border border-border bg-surface px-3 py-2 text-sm';
+
 const first = (v: string | string[] | undefined): string | undefined =>
   Array.isArray(v) ? v[0] : v;
 
@@ -17,14 +19,25 @@ export default async function GalleryPage({ searchParams }: PageProps<'/projects
   const sp = await searchParams;
   const q = first(sp.q)?.trim() ?? '';
   const tag = first(sp.tag) ?? '';
+  const eventRef = first(sp.event) ?? '';
   const page = Math.max(1, Number(first(sp.page)) || 1);
 
-  const query = new URLSearchParams({ page: String(page) });
-  if (q) query.set('q', q);
-  if (tag) query.set('tag', tag);
-
   let data: Schemas['ProjectPageDto'];
+  let events: Schemas['EventDto'][];
+  let tracks: Schemas['EventTrackDto'][] = [];
+  const query = new URLSearchParams({ page: String(page) });
   try {
+    events = (await apiGet<Schemas['EventPageDto']>('/api/events?pageSize=100')).items;
+    const event = events.find((e) => e.id === eventRef || e.slug === eventRef);
+    if (event) {
+      tracks = (await apiGet<Schemas['EventDetailDto']>(`/api/events/${event.id}`)).tracks;
+      query.set('event', event.slug);
+    }
+    // A track only filters within its own event; a stale one from another event is dropped.
+    const track = tracks.find((t) => t.id === first(sp.track));
+    if (track) query.set('track', track.id);
+    if (q) query.set('q', q);
+    if (tag) query.set('tag', tag);
     data = await apiGet<Schemas['ProjectPageDto']>(`/api/projects?${query.toString()}`);
   } catch (e) {
     return (
@@ -52,23 +65,75 @@ export default async function GalleryPage({ searchParams }: PageProps<'/projects
             {q ? ` matching “${q}”` : ''}
           </p>
         </div>
-        <form action="/projects" method="get" role="search" className="flex gap-2">
+        <form action="/projects" method="get" role="search" className="flex flex-wrap gap-2">
           <label htmlFor="q" className="sr-only">
             Search projects
           </label>
-          <Input id="q" name="q" type="search" defaultValue={q} placeholder="Search projects" />
+          <Input
+            id="q"
+            name="q"
+            type="search"
+            defaultValue={q}
+            placeholder="Search projects"
+            className="w-56"
+          />
+          <label htmlFor="event" className="sr-only">
+            Event
+          </label>
+          <select
+            id="event"
+            name="event"
+            defaultValue={query.get('event') ?? ''}
+            className={select}
+          >
+            <option value="">All events</option>
+            {events.map((e) => (
+              <option key={e.id} value={e.slug}>
+                {e.name}
+              </option>
+            ))}
+          </select>
+          {tracks.length ? (
+            <>
+              <label htmlFor="track" className="sr-only">
+                Track
+              </label>
+              <select
+                id="track"
+                name="track"
+                defaultValue={query.get('track') ?? ''}
+                className={select}
+              >
+                <option value="">All tracks</option>
+                {tracks.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
+          {tag ? <input type="hidden" name="tag" value={tag} /> : null}
           <Button type="submit" variant="secondary">
             Search
           </Button>
         </form>
       </div>
+      {tag || query.has('event') ? (
+        <p className="mt-2 text-sm text-muted">
+          {tag ? <>Tag: {tag} · </> : null}
+          <Link href="/projects" className="underline">
+            Clear filters
+          </Link>
+        </p>
+      ) : null}
 
       {data.items.length === 0 ? (
         <div className="mt-6">
           <EmptyState title="No projects found">
-            {q ? (
+            {q || tag || query.has('event') ? (
               <Link href="/projects" className="underline">
-                Clear the search
+                Clear the search and filters
               </Link>
             ) : (
               'Projects appear here once teams submit them.'

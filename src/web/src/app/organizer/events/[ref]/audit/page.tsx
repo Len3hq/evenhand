@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { formatUtc } from '@/components/organizer/dates';
+import { formatUtc } from '@/lib/dates';
 import { Button, Card, EmptyState, ErrorState, Input, Label } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
 import type { Schemas } from '@/lib/api/types';
-import { requireLogin } from '@/lib/organizer';
+import { requireLogin } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Audit trail' };

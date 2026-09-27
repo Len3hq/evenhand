@@ -2,13 +2,19 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import type { Actor } from '../../core/auth/actor.js';
 import { AuditService } from '../../core/audit.service.js';
 import { Clock } from '../../core/clock.js';
-import { assertSubmissionsOpen } from '../../core/deadline.js';
+import { assertSubmissionsOpen, submissionsOpen } from '../../core/deadline.js';
 import { DomainError, forbidden } from '../../core/errors.js';
 import { PrismaService, type Tx } from '../../core/prisma.service.js';
 import { byRef } from '../../core/refs.js';
 import { generateToken, hashToken } from '../../core/tokens.js';
 import { type Event, Prisma } from '../../generated/prisma/client.js';
-import type { CreateTeamDto, InviteDto, InvitePreviewDto, TeamDto } from './dto/team.dto.js';
+import type {
+  CreateTeamDto,
+  InviteDto,
+  InvitePreviewDto,
+  MyTeamDto,
+  TeamDto,
+} from './dto/team.dto.js';
 
 /** How long an invite link works, and how many people can join with it. */
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -73,6 +79,46 @@ export class TeamsService {
       }),
     );
     return toDto(team);
+  }
+
+  /** The caller's own teams, newest event deadline first. Only ever the caller's. */
+  async mine(actor: Actor): Promise<MyTeamDto[]> {
+    const teams = await this.prisma.team.findMany({
+      where: { members: { some: { userId: actor.userId } } },
+      include: {
+        ...TEAM_INCLUDE,
+        event: true,
+        submissions: {
+          where: { supersededById: null, duplicateHold: false },
+          select: { id: true, title: true, status: true, submittedAt: true },
+          take: 1,
+        },
+      },
+      orderBy: [{ event: { submissionsClose: 'desc' } }, { createdAt: 'asc' }],
+    });
+    const now = this.clock.now();
+    return teams.map((t) => {
+      const s = t.submissions[0];
+      return {
+        team: toDto(t),
+        event: {
+          id: t.event.id,
+          slug: t.event.slug,
+          name: t.event.name,
+          opensAt: t.event.opensAt?.toISOString() ?? null,
+          submissionsClose: t.event.submissionsClose.toISOString(),
+          submissionsOpen: submissionsOpen(t.event, now),
+        },
+        submission: s
+          ? {
+              id: s.id,
+              title: s.title,
+              status: s.status,
+              submittedAt: s.submittedAt?.toISOString() ?? null,
+            }
+          : null,
+      };
+    });
   }
 
   /**

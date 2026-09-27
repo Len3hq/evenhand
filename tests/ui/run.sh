@@ -8,6 +8,9 @@
 # the portal itself never needs it). The browser addresses the portal as localhost:8080, so
 # the API's same-origin (CSRF) check sees exactly what a real browser sends. The checks add
 # their own events and accounts; they never change existing ones.
+#
+# The stack allows 10 logins and registrations per minute per address (RATE_LIMIT_LOGIN_PER_MIN)
+# and the checks use 9, so wait a minute between two runs or they will see 429s.
 set -eu
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 PLAYWRIGHT=1.55.0

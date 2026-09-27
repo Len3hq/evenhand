@@ -343,6 +343,43 @@ export interface paths {
         patch: operations["PrizesController_update"];
         trace?: never;
     };
+    "/api/events/{eventRef}/organizers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OrganizersController_list"];
+        put?: never;
+        /**
+         * Make an existing account an organiser (404 if no account uses the email). Refused for
+         *     someone on a team in the event or judging it (409 `conflict_of_interest`).
+         */
+        post: operations["OrganizersController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{eventRef}/organizers/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove an organiser, yourself included; never the last one (409 `last_organizer`). */
+        delete: operations["OrganizersController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events/{eventRef}/teams": {
         parameters: {
             query?: never;
@@ -358,6 +395,23 @@ export interface paths {
          *     event (409 `already_on_team`); team names are unique per event (409 `team_name_taken`).
          */
         post: operations["TeamsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Your own teams, each with its event and current submission. Any logged-in user. */
+        get: operations["TeamsController_mine"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -738,6 +792,20 @@ export interface components {
             description?: string | null;
             track?: string | null;
         };
+        OrganizerDto: {
+            userId: string;
+            name: string;
+            email: string;
+            /** @description When they became an organiser of this event. */
+            since: string;
+        };
+        AddOrganizerDto: {
+            /**
+             * Format: email
+             * @description An existing account's email: the portal sends no email, so they register first.
+             */
+            email: string;
+        };
         CreateTeamDto: {
             /** @description Unique within the event. */
             name: string;
@@ -757,6 +825,28 @@ export interface components {
             members: components["schemas"]["TeamMemberDto"][];
             /** @description The team's current submission in this event (draft or submitted), if it has one. */
             submissionId: string | null;
+        };
+        MyTeamEventDto: {
+            id: string;
+            slug: string;
+            name: string;
+            opensAt: string | null;
+            submissionsClose: string;
+            /** @description True while the event accepts submissions and team changes. */
+            submissionsOpen: boolean;
+        };
+        MyTeamSubmissionDto: {
+            id: string;
+            title: string;
+            /** @enum {string} */
+            status: "DRAFT" | "SUBMITTED";
+            submittedAt: string | null;
+        };
+        MyTeamDto: {
+            team: components["schemas"]["TeamDto"];
+            event: components["schemas"]["MyTeamEventDto"];
+            /** @description The team's current submission, if it has started one. */
+            submission: components["schemas"]["MyTeamSubmissionDto"] | null;
         };
         InviteDto: {
             /** @description The secret. Shown only in this response; the server keeps a hash. */
@@ -1375,6 +1465,75 @@ export interface operations {
             };
         };
     };
+    OrganizersController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizerDto"][];
+                };
+            };
+        };
+    };
+    OrganizersController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddOrganizerDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizerDto"];
+                };
+            };
+        };
+    };
+    OrganizersController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     TeamsController_create: {
         parameters: {
             query?: never;
@@ -1397,6 +1556,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TeamDto"];
+                };
+            };
+        };
+    };
+    TeamsController_mine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyTeamDto"][];
                 };
             };
         };

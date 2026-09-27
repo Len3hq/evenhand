@@ -43,3 +43,28 @@ export class InvitePreviewDto {
   expiresAt: string;
   usesLeft: number;
 }
+
+export class MyTeamEventDto {
+  id: string;
+  slug: string;
+  name: string;
+  opensAt: string | null;
+  submissionsClose: string;
+  /** True while the event accepts submissions and team changes. */
+  submissionsOpen: boolean;
+}
+
+export class MyTeamSubmissionDto {
+  id: string;
+  title: string;
+  status: 'DRAFT' | 'SUBMITTED';
+  submittedAt: string | null;
+}
+
+/** One of the caller's teams, with what their pages need to show next to it. */
+export class MyTeamDto {
+  team: TeamDto;
+  event: MyTeamEventDto;
+  /** The team's current submission, if it has started one. */
+  submission: MyTeamSubmissionDto | null;
+}

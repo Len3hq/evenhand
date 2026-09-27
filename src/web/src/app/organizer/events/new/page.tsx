@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { EventForm } from '@/components/organizer/event-form';
 import { ErrorState } from '@/components/ui';
-import { requireLogin } from '@/lib/organizer';
+import { requireLogin } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'New event' };

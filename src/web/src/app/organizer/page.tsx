@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Badge, Card, EmptyState } from '@/components/ui';
-import { formatUtc } from '@/components/organizer/dates';
-import { managedEvents, requireLogin } from '@/lib/organizer';
+import { formatUtc } from '@/lib/dates';
+import { managedEvents } from '@/lib/organizer';
+import { requireLogin } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Organise' };

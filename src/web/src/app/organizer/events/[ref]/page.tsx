@@ -2,13 +2,15 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { EventForm } from '@/components/organizer/event-form';
-import { formatUtc } from '@/components/organizer/dates';
+import { OrganizersEditor } from '@/components/organizer/organizers-editor';
+import { formatUtc } from '@/lib/dates';
 import { PrizesEditor } from '@/components/organizer/prizes-editor';
 import { TracksEditor } from '@/components/organizer/tracks-editor';
 import { Badge, Card, ErrorState } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
 import type { Schemas } from '@/lib/api/types';
-import { canManage, requireLogin } from '@/lib/organizer';
+import { canManage } from '@/lib/organizer';
+import { requireLogin } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Event settings' };
@@ -33,6 +35,8 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
       />
     );
   }
+
+  const organizers = await apiGet<Schemas['OrganizerDto'][]>(`/api/events/${event.id}/organizers`);
 
   const downloads = [
     {
@@ -76,6 +80,11 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
       <Card>
         <h2 className="mb-4 text-lg font-semibold">Prizes</h2>
         <PrizesEditor eventId={event.id} prizes={event.prizes} tracks={event.tracks} />
+      </Card>
+
+      <Card>
+        <h2 className="mb-4 text-lg font-semibold">Organisers</h2>
+        <OrganizersEditor eventId={event.id} organizers={organizers} myId={me.id} />
       </Card>
 
       <Card>

@@ -23,6 +23,10 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
       return `${who} created the event ${it}`;
     case 'event.updated':
       return `${who} changed the event: ${changes}`;
+    case 'organizer.added':
+      return `${who} made ${it} an organiser`;
+    case 'organizer.removed':
+      return `${who} removed ${it} as an organiser`;
     case 'track.created':
       return `${who} added the track ${it}`;
     case 'track.updated':

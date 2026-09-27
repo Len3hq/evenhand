@@ -4,7 +4,7 @@ import type { Request } from 'express';
 import type { Actor } from '../../core/auth/actor.js';
 import { CurrentActor, Public } from '../../core/auth/decorators.js';
 import { SubmissionsOpenGuard } from '../../core/deadline.js';
-import { CreateTeamDto, InviteDto, InvitePreviewDto, TeamDto } from './dto/team.dto.js';
+import { CreateTeamDto, InviteDto, InvitePreviewDto, MyTeamDto, TeamDto } from './dto/team.dto.js';
 import { TeamsService } from './teams.service.js';
 
 @ApiTags('teams')
@@ -27,6 +27,12 @@ export class TeamsController {
   ): Promise<TeamDto> {
     // SubmissionsOpenGuard has resolved and checked the event.
     return this.teams.create(actor, req.event!, dto);
+  }
+
+  /** Your own teams, each with its event and current submission. Any logged-in user. */
+  @Get('me/teams')
+  mine(@CurrentActor() actor: Actor): Promise<MyTeamDto[]> {
+    return this.teams.mine(actor);
   }
 
   /** A team and its members. Its members, the event's organisers and admins only. */

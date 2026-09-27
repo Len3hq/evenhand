@@ -803,6 +803,113 @@
         ]
       }
     },
+    "/api/events/{eventRef}/organizers": {
+      "get": {
+        "operationId": "OrganizersController_list",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizerDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ]
+      },
+      "post": {
+        "operationId": "OrganizersController_add",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddOrganizerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Make an existing account an organiser (404 if no account uses the email). Refused for\nsomeone on a team in the event or judging it (409 `conflict_of_interest`).",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/organizers/{userId}": {
+      "delete": {
+        "operationId": "OrganizersController_remove",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Remove an organiser, yourself included; never the last one (409 `last_organizer`).",
+        "tags": [
+          "events"
+        ]
+      }
+    },
     "/api/events/{eventRef}/teams": {
       "post": {
         "operationId": "TeamsController_create",
@@ -838,6 +945,31 @@
           }
         },
         "summary": "Create a team in an event; you become its first member. Only while the event accepts\nsubmissions (403 `submissions_closed` / `submissions_not_open`). One team per person per\nevent (409 `already_on_team`); team names are unique per event (409 `team_name_taken`).",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/api/me/teams": {
+      "get": {
+        "operationId": "TeamsController_mine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MyTeamDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Your own teams, each with its event and current submission. Any logged-in user.",
         "tags": [
           "teams"
         ]
@@ -2087,6 +2219,43 @@
           }
         }
       },
+      "OrganizerDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string",
+            "description": "When they became an organiser of this event."
+          }
+        },
+        "required": [
+          "userId",
+          "name",
+          "email",
+          "since"
+        ]
+      },
+      "AddOrganizerDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "An existing account's email: the portal sends no email, so they register first.",
+            "format": "email"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
       "CreateTeamDto": {
         "type": "object",
         "properties": {
@@ -2160,6 +2329,93 @@
           "name",
           "members",
           "submissionId"
+        ]
+      },
+      "MyTeamEventDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "opensAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "submissionsClose": {
+            "type": "string"
+          },
+          "submissionsOpen": {
+            "type": "boolean",
+            "description": "True while the event accepts submissions and team changes."
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "opensAt",
+          "submissionsClose",
+          "submissionsOpen"
+        ]
+      },
+      "MyTeamSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED"
+            ]
+          },
+          "submittedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status",
+          "submittedAt"
+        ]
+      },
+      "MyTeamDto": {
+        "type": "object",
+        "properties": {
+          "team": {
+            "$ref": "#/components/schemas/TeamDto"
+          },
+          "event": {
+            "$ref": "#/components/schemas/MyTeamEventDto"
+          },
+          "submission": {
+            "nullable": true,
+            "description": "The team's current submission, if it has started one.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MyTeamSubmissionDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "team",
+          "event",
+          "submission"
         ]
       },
       "InviteDto": {
