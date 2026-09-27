@@ -416,6 +416,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events/{eventRef}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything that happened in an event, newest first, each entry with a readable summary.
+         *     Filter by `action` (`event.updated`, or a group like `submission.`), `actor` (email or id)
+         *     and `target` (a row id). The event's organisers and admins only.
+         */
+        get: operations["AuditLogController_forEvent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{eventRef}/export/audit.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The event's whole trail, oldest first, as CSV. The event's organisers and admins only. */
+        get: operations["AuditLogController_eventCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Entries outside any event (logins, accounts, admin grants), with client addresses. Admins only. */
+        get: operations["AuditLogController_platform"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -695,6 +750,56 @@ export interface components {
             eventSlug: string;
             expiresAt: string;
             usesLeft: number;
+        };
+        AuditActorDto: {
+            id: string;
+            name: string;
+            email: string;
+        };
+        AuditEntryDto: {
+            /** @description Increasing: a later entry always has a larger id. */
+            id: string;
+            at: string;
+            action: string;
+            /** @description Who did it; null for the system (seed, command line). */
+            actor: components["schemas"]["AuditActorDto"] | null;
+            targetType: string;
+            targetId: string | null;
+            /** @description The target's name or title, when it can be resolved (also for deleted rows). */
+            target: string | null;
+            /** @description One readable sentence, e.g. `Ben joined the team "Quiet Hours" with an invite link`. */
+            summary: string;
+            before: Record<string, never>;
+            after: Record<string, never>;
+        };
+        AuditPageDto: {
+            items: components["schemas"]["AuditEntryDto"][];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        PlatformAuditEntryDto: {
+            /** @description Increasing: a later entry always has a larger id. */
+            id: string;
+            at: string;
+            action: string;
+            /** @description Who did it; null for the system (seed, command line). */
+            actor: components["schemas"]["AuditActorDto"] | null;
+            targetType: string;
+            targetId: string | null;
+            /** @description The target's name or title, when it can be resolved (also for deleted rows). */
+            target: string | null;
+            /** @description One readable sentence, e.g. `Ben joined the team "Quiet Hours" with an invite link`. */
+            summary: string;
+            before: Record<string, never>;
+            after: Record<string, never>;
+            ip: string | null;
+        };
+        PlatformAuditPageDto: {
+            items: components["schemas"]["PlatformAuditEntryDto"][];
+            page: number;
+            pageSize: number;
+            total: number;
         };
     };
     responses: never;
@@ -1356,6 +1461,81 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TeamDto"];
+                };
+            };
+        };
+    };
+    AuditLogController_forEvent: {
+        parameters: {
+            query?: {
+                /** @description An action (`event.updated`) or a group ending in a dot (`submission.`). */
+                action?: string;
+                /** @description Only what this person did: their email or user id. */
+                actor?: string;
+                /** @description Only entries about this row (e.g. a submission id). */
+                target?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditPageDto"];
+                };
+            };
+        };
+    };
+    AuditLogController_eventCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuditLogController_platform: {
+        parameters: {
+            query?: {
+                /** @description An action (`event.updated`) or a group ending in a dot (`submission.`). */
+                action?: string;
+                /** @description Only what this person did: their email or user id. */
+                actor?: string;
+                /** @description Only entries about this row (e.g. a submission id). */
+                target?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformAuditPageDto"];
                 };
             };
         };

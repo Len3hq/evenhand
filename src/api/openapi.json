@@ -966,6 +966,148 @@
           "teams"
         ]
       }
+    },
+    "/api/events/{eventRef}/audit": {
+      "get": {
+        "operationId": "AuditLogController_forEvent",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "description": "An action (`event.updated`) or a group ending in a dot (`submission.`).",
+            "schema": {
+              "maxLength": 60,
+              "pattern": "^[a-z_]+\\.([a-z_]+)?$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor",
+            "required": false,
+            "in": "query",
+            "description": "Only what this person did: their email or user id.",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "target",
+            "required": false,
+            "in": "query",
+            "description": "Only entries about this row (e.g. a submission id).",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Everything that happened in an event, newest first, each entry with a readable summary.\nFilter by `action` (`event.updated`, or a group like `submission.`), `actor` (email or id)\nand `target` (a row id). The event's organisers and admins only.",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/export/audit.csv": {
+      "get": {
+        "operationId": "AuditLogController_eventCsv",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "The event's whole trail, oldest first, as CSV. The event's organisers and admins only.",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/audit": {
+      "get": {
+        "operationId": "AuditLogController_platform",
+        "parameters": [
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "description": "An action (`event.updated`) or a group ending in a dot (`submission.`).",
+            "schema": {
+              "maxLength": 60,
+              "pattern": "^[a-z_]+\\.([a-z_]+)?$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor",
+            "required": false,
+            "in": "query",
+            "description": "Only what this person did: their email or user id.",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "target",
+            "required": false,
+            "in": "query",
+            "description": "Only entries about this row (e.g. a submission id).",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformAuditPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Entries outside any event (logins, accounts, admin grants), with client addresses. Admins only.",
+        "tags": [
+          "audit"
+        ]
+      }
     }
   },
   "info": {
@@ -2038,6 +2180,200 @@
           "eventSlug",
           "expiresAt",
           "usesLeft"
+        ]
+      },
+      "AuditActorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email"
+        ]
+      },
+      "AuditEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Increasing: a later entry always has a larger id."
+          },
+          "at": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "actor": {
+            "nullable": true,
+            "description": "Who did it; null for the system (seed, command line).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuditActorDto"
+              }
+            ]
+          },
+          "targetType": {
+            "type": "string"
+          },
+          "targetId": {
+            "type": "string",
+            "nullable": true
+          },
+          "target": {
+            "type": "string",
+            "nullable": true,
+            "description": "The target's name or title, when it can be resolved (also for deleted rows)."
+          },
+          "summary": {
+            "type": "string",
+            "description": "One readable sentence, e.g. `Ben joined the team \"Quiet Hours\" with an invite link`."
+          },
+          "before": {
+            "type": "object"
+          },
+          "after": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "action",
+          "actor",
+          "targetType",
+          "targetId",
+          "target",
+          "summary",
+          "before",
+          "after"
+        ]
+      },
+      "AuditPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ]
+      },
+      "PlatformAuditEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Increasing: a later entry always has a larger id."
+          },
+          "at": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "actor": {
+            "nullable": true,
+            "description": "Who did it; null for the system (seed, command line).",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuditActorDto"
+              }
+            ]
+          },
+          "targetType": {
+            "type": "string"
+          },
+          "targetId": {
+            "type": "string",
+            "nullable": true
+          },
+          "target": {
+            "type": "string",
+            "nullable": true,
+            "description": "The target's name or title, when it can be resolved (also for deleted rows)."
+          },
+          "summary": {
+            "type": "string",
+            "description": "One readable sentence, e.g. `Ben joined the team \"Quiet Hours\" with an invite link`."
+          },
+          "before": {
+            "type": "object"
+          },
+          "after": {
+            "type": "object"
+          },
+          "ip": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "action",
+          "actor",
+          "targetType",
+          "targetId",
+          "target",
+          "summary",
+          "before",
+          "after",
+          "ip"
+        ]
+      },
+      "PlatformAuditPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformAuditEntryDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
         ]
       }
     }

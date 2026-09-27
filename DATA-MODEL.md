@@ -88,7 +88,8 @@ In demo mode the seed also creates `organizer@evenhand.local`, `admin@evenhand.l
 | Export                                                      | Route                                                   | Status     |
 | ----------------------------------------------------------- | ------------------------------------------------------- | ---------- |
 | Every review, one row per review, one column per criterion  | `GET /api/events/:event/export/scores.csv` (organisers) | ✅         |
+| The event's audit trail with a readable summary per entry   | `GET /api/events/:event/export/audit.csv` (organisers)  | ✅         |
 | Registrations, teams, submissions, assignments, results CSV | `/api/events/:event/export/*.csv`                       | ⏳ planned |
 | Whole event in the fixtures.json shape (round trip)         | `cli export-event`                                      | ⏳ planned |
 
-CSV rules: UTF-8 without a BOM, a multi-column header, RFC 4180 quoting, `\n` line endings, stable row order (judge, then project in fixture order). Fixture ids are used when present, so a CSV can be joined back to `fixtures.json`.
+CSV rules: UTF-8 without a BOM, a multi-column header, RFC 4180 quoting, `\n` line endings, stable row order (judge, then project in fixture order). Text that a spreadsheet would run as a formula (starting with `=`, `+`, `-`, `@`, tab or carriage return) gets a leading `'`; numbers are left alone. Fixture ids are used when present, so a CSV can be joined back to `fixtures.json`.
