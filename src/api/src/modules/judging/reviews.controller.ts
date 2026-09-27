@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put } from '@nestjs/common';
 import { ApiParam, ApiTags } from '@nestjs/swagger';
 import type { Actor } from '../../core/auth/actor.js';
-import { CurrentActor, RequireRole } from '../../core/auth/decorators.js';
+import { CurrentActor, RequireRole, ReviewRateLimit } from '../../core/auth/decorators.js';
 import { JudgeQueueDto, ReviewDto, SaveReviewDto } from './dto/review.dto.js';
 import { ReviewsService } from './reviews.service.js';
 
@@ -32,6 +32,7 @@ export class ReviewsController {
    * 403 `judging_closed` after judging closes.
    */
   @ApiParam(ASSIGNMENT)
+  @ReviewRateLimit()
   @Put('reviews/:assignmentId')
   save(
     @CurrentActor() actor: Actor,
@@ -43,6 +44,7 @@ export class ReviewsController {
 
   /** Submit the review: every criterion marked. Final; submitting again changes nothing. */
   @ApiParam(ASSIGNMENT)
+  @ReviewRateLimit()
   @Post('reviews/:assignmentId/submit')
   @HttpCode(HttpStatus.OK)
   submit(@CurrentActor() actor: Actor, @Param('assignmentId') id: string): Promise<ReviewDto> {

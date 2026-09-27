@@ -18,6 +18,9 @@ const e2eEnv = {
   // High limits so the suite itself is never throttled; the rate-limit test lowers them.
   RATE_LIMIT_DEFAULT_PER_MIN: '10000',
   RATE_LIMIT_LOGIN_PER_MIN: '10000',
+  RATE_LIMIT_EXPORT_PER_MIN: '10000',
+  RATE_LIMIT_REVIEW_PER_MIN: '10000',
+  AUTH_FAILURES_PER_MIN: '10000',
 };
 // global-setup.ts seeds through the CLI from this process, so it needs the same settings as
 // the test workers; without them it seeds without demo data unless a local .env happens to

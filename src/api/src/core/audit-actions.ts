@@ -29,6 +29,7 @@ export const AUDIT_ACTIONS = [
   'review.submitted',
   'ranking.run',
   'ranking.published',
+  'request.rate_limited',
   'track.created',
   'track.updated',
   'track.deleted',

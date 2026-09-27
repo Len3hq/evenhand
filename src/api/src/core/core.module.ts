@@ -1,9 +1,9 @@
-import { Global, Module, ValidationPipe } from '@nestjs/common';
+import { type ExecutionContext, Global, Module, ValidationPipe } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_PIPE, Reflector } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuditService } from './audit.service.js';
 import { ActorService } from './auth/actor.service.js';
-import { AUTH_RATE_LIMIT } from './auth/decorators.js';
+import { AUTH_RATE_LIMIT, EXPORT_RATE_LIMIT, REVIEW_RATE_LIMIT } from './auth/decorators.js';
 import { RoleGuard } from './auth/role.guard.js';
 import { SessionGuard } from './auth/session.guard.js';
 import { Clock, SystemClock } from './clock.js';
@@ -11,8 +11,13 @@ import { AppConfig } from './config.js';
 import { SubmissionsOpenGuard } from './deadline.js';
 import { AllExceptionsFilter } from './errors.js';
 import { PrismaService } from './prisma.service.js';
+import { AuditedThrottlerGuard, AuthFailureLimiter } from './rate-limit.js';
 
 const MINUTE_MS = 60_000;
+
+const reflector = new Reflector();
+const marked = (key: string, ctx: ExecutionContext): boolean =>
+  reflector.get<boolean>(key, ctx.getHandler()) === true;
 
 /**
  * Cross-cutting infrastructure, available everywhere without importing:
@@ -32,7 +37,23 @@ const MINUTE_MS = 60_000;
           ttl: MINUTE_MS,
           limit: config.rateLimitLoginPerMin,
           // Only routes marked @AuthRateLimit() (login, register) count against this one.
-          skipIf: (ctx) => !new Reflector().get<boolean>(AUTH_RATE_LIMIT, ctx.getHandler()),
+          skipIf: (ctx) => !marked(AUTH_RATE_LIMIT, ctx),
+        },
+        // Exports and judge writes have limits of their own (decision 55).
+        {
+          name: 'export',
+          ttl: MINUTE_MS,
+          limit: config.rateLimitExportPerMin,
+          skipIf: (ctx) => !marked(EXPORT_RATE_LIMIT, ctx),
+          // One counter per address across every export route, not one per route.
+          generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
+        },
+        {
+          name: 'review',
+          ttl: MINUTE_MS,
+          limit: config.rateLimitReviewPerMin,
+          skipIf: (ctx) => !marked(REVIEW_RATE_LIMIT, ctx),
+          generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
         },
       ],
       inject: [AppConfig],
@@ -45,7 +66,8 @@ const MINUTE_MS = 60_000;
     AuditService,
     ActorService,
     SubmissionsOpenGuard,
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    AuthFailureLimiter,
+    { provide: APP_GUARD, useClass: AuditedThrottlerGuard },
     { provide: APP_GUARD, useClass: SessionGuard },
     { provide: APP_GUARD, useClass: RoleGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

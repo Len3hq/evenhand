@@ -5,6 +5,17 @@ import { BASE, finish, openBrowser, step } from './harness.mjs';
 const { browser, newPage } = await openBrowser();
 const page = await newPage();
 
+await step('pages carry a strict Content-Security-Policy with a fresh nonce', async () => {
+  const policy = async () =>
+    (await page.goto(`${BASE}/projects`)).headers()['content-security-policy'];
+  const a = await policy();
+  const b = await policy();
+  if (!/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/.test(a)) throw new Error(a);
+  if (/script-src[^;]*'unsafe-inline'/.test(a)) throw new Error('inline scripts allowed');
+  if (!a.includes("frame-ancestors 'none'")) throw new Error('framing allowed');
+  if (a === b) throw new Error('the nonce did not change between requests');
+});
+
 await step('a visitor sees fixture projects without logging in', async () => {
   await page.goto(`${BASE}/projects`);
   await page.getByText('Glass Signal').first().waitFor();

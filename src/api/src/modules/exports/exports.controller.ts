@@ -2,7 +2,7 @@ import { Controller, Get, Param, Res } from '@nestjs/common';
 import { ApiParam, ApiProduces, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { Actor } from '../../core/auth/actor.js';
-import { CurrentActor } from '../../core/auth/decorators.js';
+import { CurrentActor, ExportRateLimit } from '../../core/auth/decorators.js';
 import { sendCsv } from '../../core/csv.js';
 import { type CsvFile, ExportsService } from './exports.service.js';
 
@@ -15,18 +15,21 @@ export class ExportsController {
   constructor(private readonly exports: ExportsService) {}
 
   /** One row per team member (teams without members get one empty row). */
+  @ExportRateLimit()
   @Get('teams.csv')
   teams(@CurrentActor() a: Actor, @Param('eventRef') e: string, @Res() res: Response) {
     return send(res, this.exports.teams(a, e));
   }
 
   /** Every submission: status, eligibility, links, duplicate state. */
+  @ExportRateLimit()
   @Get('submissions.csv')
   submissions(@CurrentActor() a: Actor, @Param('eventRef') e: string, @Res() res: Response) {
     return send(res, this.exports.submissions(a, e));
   }
 
   /** Who reviews what: batch, queue position and state. */
+  @ExportRateLimit()
   @Get('assignments.csv')
   assignments(@CurrentActor() a: Actor, @Param('eventRef') e: string, @Res() res: Response) {
     return send(res, this.exports.assignments(a, e));

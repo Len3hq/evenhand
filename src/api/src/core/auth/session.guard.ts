@@ -7,6 +7,7 @@ import { DomainError, type ErrorCode } from '../errors.js';
 import { PrismaService } from '../prisma.service.js';
 import { hashToken } from '../tokens.js';
 import type { Actor } from './actor.js';
+import { AuthFailureLimiter } from '../rate-limit.js';
 import { ActorService } from './actor.service.js';
 import { IS_PUBLIC } from './decorators.js';
 
@@ -34,6 +35,7 @@ export class SessionGuard implements CanActivate {
     private readonly actors: ActorService,
     private readonly clock: Clock,
     private readonly config: AppConfig,
+    private readonly failures: AuthFailureLimiter,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -43,7 +45,11 @@ export class SessionGuard implements CanActivate {
       context.getClass(),
     ]);
 
+    // An address that keeps presenting bad credentials is refused for the rest of the minute.
+    // Only on routes that need a login: an expired cookie on the public gallery is not a guess.
+    if (!isPublic) await this.failures.assertAllowed(req);
     const result = await this.authenticate(req);
+    if (result && 'failure' in result && !isPublic) this.failures.recordFailure(req);
     if (result && 'actor' in result) {
       if (result.actor.via === 'session' && !SAFE_METHODS.has(req.method)) {
         this.assertAllowedOrigin(req);

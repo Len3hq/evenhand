@@ -2,7 +2,7 @@ import { Controller, Get, Param, Res } from '@nestjs/common';
 import { ApiParam, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { Actor } from '../../core/auth/actor.js';
-import { CurrentActor } from '../../core/auth/decorators.js';
+import { CurrentActor, ExportRateLimit } from '../../core/auth/decorators.js';
 import { type EventExportFile, EventExportService } from './event-export.service.js';
 
 @ApiTags('export')
@@ -17,6 +17,7 @@ export class EventExportController {
    * organisers and admins only.
    */
   @ApiParam({ name: 'eventRef', description: 'Event id, fixture id (evt_01) or slug.' })
+  @ExportRateLimit()
   @Get('events/:eventRef/export.json')
   async export(
     @CurrentActor() actor: Actor,

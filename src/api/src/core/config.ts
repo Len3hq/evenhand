@@ -14,6 +14,12 @@ export class AppConfig {
     readonly allowedOrigins: readonly string[],
     readonly rateLimitDefaultPerMin: number,
     readonly rateLimitLoginPerMin: number,
+    /** CSV and JSON exports per minute per address. */
+    readonly rateLimitExportPerMin: number,
+    /** Judge review saves and submits per minute per address (autosave included). */
+    readonly rateLimitReviewPerMin: number,
+    /** Failed token or session checks per minute per address before it is refused for the minute. */
+    readonly authFailuresPerMin: number,
     readonly uploadsDir: string,
     readonly sessionTtlHours: number,
   ) {}
@@ -52,6 +58,9 @@ export class AppConfig {
         .filter(Boolean),
       int('RATE_LIMIT_DEFAULT_PER_MIN', 300),
       int('RATE_LIMIT_LOGIN_PER_MIN', 10),
+      int('RATE_LIMIT_EXPORT_PER_MIN', 30),
+      int('RATE_LIMIT_REVIEW_PER_MIN', 120),
+      int('AUTH_FAILURES_PER_MIN', 20),
       env.UPLOADS_DIR ?? './uploads',
       int('SESSION_TTL_HOURS', 24 * 7),
     );

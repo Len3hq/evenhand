@@ -2,7 +2,7 @@ import { Controller, Get, Param, Query, Res } from '@nestjs/common';
 import { ApiParam, ApiProduces, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { Actor } from '../../core/auth/actor.js';
-import { CurrentActor } from '../../core/auth/decorators.js';
+import { CurrentActor, ExportRateLimit } from '../../core/auth/decorators.js';
 import { sendCsv } from '../../core/csv.js';
 import { AuditLogService } from './audit-log.service.js';
 import { AuditPageDto, AuditQueryDto, PlatformAuditPageDto } from './dto/audit.dto.js';
@@ -30,6 +30,7 @@ export class AuditLogController {
   /** The event's whole trail, oldest first, as CSV. The event's organisers and admins only. */
   @ApiParam({ name: 'eventRef', description: 'Event id, fixture id (evt_01) or slug.' })
   @ApiProduces('text/csv')
+  @ExportRateLimit()
   @Get('events/:eventRef/export/audit.csv')
   async eventCsv(
     @CurrentActor() actor: Actor,

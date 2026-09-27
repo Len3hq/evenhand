@@ -2,7 +2,7 @@ import { Controller, Get, HttpCode, HttpStatus, Param, Post, Res } from '@nestjs
 import { ApiParam, ApiProduces, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { Actor } from '../../core/auth/actor.js';
-import { CurrentActor, Public } from '../../core/auth/decorators.js';
+import { CurrentActor, ExportRateLimit, Public } from '../../core/auth/decorators.js';
 import { sendCsv } from '../../core/csv.js';
 import { PublicResultsDto, RankingDto, RankingSummaryDto } from './dto/ranking.dto.js';
 import { RankingsService } from './rankings.service.js';
@@ -59,6 +59,7 @@ export class RankingsController {
   /** The published ranking (else the newest run) as CSV. Organisers and admins. */
   @ApiParam(EVENT)
   @ApiProduces('text/csv')
+  @ExportRateLimit()
   @Get('events/:eventRef/export/results.csv')
   async resultsCsv(
     @CurrentActor() actor: Actor,

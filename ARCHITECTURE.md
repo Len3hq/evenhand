@@ -77,20 +77,22 @@ A real deployment has no default admin and no default password. The first admin 
 
 Environment variables, validated at start-up (`core/config.ts`; a bad value stops the process with a clear message):
 
-| Variable                                                  | Default                       | Meaning                                                        |
-| --------------------------------------------------------- | ----------------------------- | -------------------------------------------------------------- |
-| `DATABASE_URL`                                            | – (required)                  | Postgres connection string                                     |
-| `PORT`                                                    | `3001`                        | API port                                                       |
-| `DEMO_MODE`                                               | `false` (compose sets `true`) | Seed demo tokens and passwords, and accept demo tokens         |
-| `DEMO_PASSWORD`                                           | `evenhand-demo`               | Password of every seeded account in demo mode                  |
-| `ALLOWED_ORIGINS`                                         | `http://localhost:8080`       | Origins allowed to make cookie-authenticated writes            |
-| `RATE_LIMIT_DEFAULT_PER_MIN` / `RATE_LIMIT_LOGIN_PER_MIN` | `300` / `10`                  | Per-IP limits                                                  |
-| `SESSION_TTL_HOURS`                                       | `168`                         | Browser session lifetime                                       |
-| `UPLOADS_DIR`                                             | `./uploads`                   | File uploads (volume `uploads` in Docker)                      |
-| `FIXTURES_PATH`                                           | `data/fixtures.json`          | Used by `cli seed` when `--fixtures` is not given              |
-| `SEED_FIXTURES` (api container)                           | `true`                        | Import `fixtures.json` on start; `false` for a real event      |
-| `API_REWRITE_TARGET` (web, **build time**)                | `http://localhost:3001`       | Where Next proxies `/api/*`. Rewrites are fixed at build time. |
-| `API_INTERNAL_URL` (web, run time)                        | `http://localhost:3001`       | Where server components call the API                           |
+| Variable                                                  | Default                       | Meaning                                                                                     |
+| --------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                            | – (required)                  | Postgres connection string                                                                  |
+| `PORT`                                                    | `3001`                        | API port                                                                                    |
+| `DEMO_MODE`                                               | `false` (compose sets `true`) | Seed demo tokens and passwords, and accept demo tokens                                      |
+| `DEMO_PASSWORD`                                           | `evenhand-demo`               | Password of every seeded account in demo mode                                               |
+| `ALLOWED_ORIGINS`                                         | `http://localhost:8080`       | Origins allowed to make cookie-authenticated writes                                         |
+| `RATE_LIMIT_DEFAULT_PER_MIN` / `RATE_LIMIT_LOGIN_PER_MIN` | `300` / `10`                  | Per-IP limits                                                                               |
+| `RATE_LIMIT_EXPORT_PER_MIN` / `RATE_LIMIT_REVIEW_PER_MIN` | `30` / `120`                  | Exports (all CSVs and the event JSON, one counter) and judge review writes, per IP          |
+| `AUTH_FAILURES_PER_MIN`                                   | `20`                          | Failed token or session checks per IP before it is refused (429) for the rest of the minute |
+| `SESSION_TTL_HOURS`                                       | `168`                         | Browser session lifetime                                                                    |
+| `UPLOADS_DIR`                                             | `./uploads`                   | File uploads (volume `uploads` in Docker)                                                   |
+| `FIXTURES_PATH`                                           | `data/fixtures.json`          | Used by `cli seed` when `--fixtures` is not given                                           |
+| `SEED_FIXTURES` (api container)                           | `true`                        | Import `fixtures.json` on start; `false` for a real event                                   |
+| `API_REWRITE_TARGET` (web, **build time**)                | `http://localhost:3001`       | Where Next proxies `/api/*`. Rewrites are fixed at build time.                              |
+| `API_INTERNAL_URL` (web, run time)                        | `http://localhost:3001`       | Where server components call the API                                                        |
 
 ## Testing
 

@@ -2,7 +2,7 @@ import { Controller, Get, Param, Res } from '@nestjs/common';
 import { ApiProduces, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import type { Actor } from '../../core/auth/actor.js';
-import { CurrentActor, RequireRole } from '../../core/auth/decorators.js';
+import { CurrentActor, ExportRateLimit, RequireRole } from '../../core/auth/decorators.js';
 import { sendCsv } from '../../core/csv.js';
 import { ScoreListDto } from './dto/scores.dto.js';
 import { JudgingService } from './judging.service.js';
@@ -34,6 +34,7 @@ export class JudgingController {
   /** Every review in the event as CSV. Organisers and admins only (acceptance check 7). */
   @RequireRole('ORGANIZER')
   @ApiProduces('text/csv')
+  @ExportRateLimit()
   @Get('events/:eventRef/export/scores.csv')
   async exportScores(
     @CurrentActor() actor: Actor,
