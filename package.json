@@ -30,7 +30,8 @@
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run test:e2e",
     "gen:api": "npm run openapi -w @evenhand/api && openapi-typescript src/api/openapi.json -o src/web/src/lib/api/schema.d.ts",
     "cli": "npm run cli -w @evenhand/api --",
-    "acceptance": "sh tests/acceptance/run.sh"
+    "acceptance": "sh tests/acceptance/run.sh",
+    "test:ui": "sh tests/ui/run.sh"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

@@ -22,6 +22,9 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
             <Link href="/projects" className="text-sm text-muted hover:text-fg">
               Gallery
             </Link>
+            <Link href="/organizer" className="text-sm text-muted hover:text-fg">
+              Organise
+            </Link>
             {/* A plain link: /api/docs is served by the API, not a Next.js page. */}
             <a href="/api/docs" className="text-sm text-muted hover:text-fg">
               API

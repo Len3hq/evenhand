@@ -4,13 +4,13 @@ How Evenhand assigns judges, scores projects, corrects for harsh and generous ju
 
 ## 1. Role isolation (implemented)
 
-| Actor                     | Own scores | Peer scores | Other event | Scores CSV | Audit log    |
-| ------------------------- | ---------- | ----------- | ----------- | ---------- | ------------ |
-| Visitor                   | 401        | 401         | 401         | 401        | 401          |
-| Participant               | 403        | 403         | 403         | 403        | 403          |
-| Judge                     | ✅         | **403**     | 403         | 403        | 403          |
-| Organiser (of that event) | –          | ✅          | 403         | ✅         | ✅ (page ⏳) |
-| Admin                     | ✅         | ✅          | ✅          | ✅         | ✅           |
+| Actor                     | Own scores | Peer scores | Other event | Scores CSV | Audit log |
+| ------------------------- | ---------- | ----------- | ----------- | ---------- | --------- |
+| Visitor                   | 401        | 401         | 401         | 401        | 401       |
+| Participant               | 403        | 403         | 403         | 403        | 403       |
+| Judge                     | ✅         | **403**     | 403         | 403        | 403       |
+| Organiser (of that event) | –          | ✅          | 403         | ✅         | ✅        |
+| Admin                     | ✅         | ✅          | ✅          | ✅         | ✅        |
 
 Enforced in API services, deny first: a judge asking for another judge's scores is refused **before** the database is asked whether that judge exists, so a real and a made-up judge get identical answers. The whole matrix is an e2e test ([`tests/api/isolation.e2e-spec.ts`](tests/api/isolation.e2e-spec.ts)) run on every change, alongside the organisers' `run.py`.
 

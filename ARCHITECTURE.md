@@ -99,6 +99,7 @@ Environment variables, validated at start-up (`core/config.ts`; a bad value stop
 | Unit       | `src/**/**.spec.ts` (Vitest)                                  | Engine maths, fixture parsing, duplicate detection, deadline boundary                                                                                                                 |
 | End-to-end | `tests/api/*.e2e-spec.ts` (Vitest + supertest, real Postgres) | The **isolation matrix** (7 actors × every protected route), cookie/CSRF/demo-mode/rate-limit behaviour, deadline with a frozen clock, hand-written SQL constraints, seed idempotency |
 | Acceptance | `tests/acceptance/run.sh`                                     | The organisers' `run.py` against the Docker stack                                                                                                                                     |
+| Browser    | `tests/ui/run.sh`                                             | Playwright's Chromium clicks through the organiser pages on the Docker stack (`npm run test:ui`)                                                                                      |
 
 `npm run check` runs everything except acceptance; CI runs acceptance too.
 

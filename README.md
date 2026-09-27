@@ -75,6 +75,7 @@ Each claim below is checked by a command anyone can run, not asserted. Numbers a
 | The database and API have no route to the internet               | `docker compose exec api node -e "fetch('https://example.org').then(()=>console.log('online'),()=>console.log('offline'))"`                                                                                                                              | `offline`                                       |
 | A backup restores exactly, and keeps the audit log append-only   | Backup and restore commands below, restored into a second database and compared                                                                                                                                                                          | Row counts identical; `UPDATE` on audit refused |
 | An event moves out and back in unchanged                         | [`tests/api/transfer.e2e-spec.ts`](tests/api/transfer.e2e-spec.ts): exporting `evt_01` reproduces the published fixtures.json; export → `cli import` into an empty database → export is byte-identical                                                   | Pass                                            |
+| An organiser can run an event from the browser                   | `npm run test:ui` ([`tests/ui`](tests/ui/)): a real Chromium logs in, creates an event, moves its deadline, adds, renames and removes a track and a prize, sees the API's error messages, and reads the result in the audit trail                        | 10 / 10 steps pass                              |
 | Everything else                                                  | `npm run check`: format, lint, typecheck, unit and end-to-end tests                                                                                                                                                                                      | 56 unit + 346 end-to-end tests pass             |
 
 The REST API is described by an OpenAPI 3 document, [`src/api/openapi.json`](src/api/openapi.json), served with Swagger UI at <http://localhost:8080/api/docs> (works offline).
@@ -93,11 +94,11 @@ Status on Sun 27 Sep. Claims only what is tested; "API" means the pages for it a
 | Public gallery with search, tag filter and pagination; project pages                         | ✅ API + UI (track filter UI to come)                             |
 | Judges' own scores, peer isolation, scores CSV export                                        | ✅                                                                |
 | Append-only audit log (database trigger), duplicate detection on import                      | ✅                                                                |
-| Readable audit trail: one sentence per entry, filters, CSV export; platform trail for admins | ✅ API, e2e-tested; audit page to come                            |
+| Readable audit trail: one sentence per entry, filters, CSV export; platform trail for admins | ✅ API + organiser page (`/organizer/events/:event/audit`)        |
 | Rate limits on login / register (429)                                                        | ✅                                                                |
 | First admin (`create-admin`), password reset (`reset-password`), backup and restore          | ✅ verified                                                       |
 | Event export (fixtures.json shape + extras) and `cli import`; round trip tested              | ✅ API and CLI                                                    |
-| Event creation and editing with dates, tracks and prizes                                     | ✅ API, e2e-tested; organiser pages to come                       |
+| Event creation and editing with dates, tracks and prizes                                     | ✅ API + organiser pages (`/organizer`), browser-tested           |
 | Teams and invite links (hashed tokens, expiry, use limit)                                    | ✅ API, e2e-tested; pages to come                                 |
 | Draft editing and submitting (edit until the deadline, drafts private)                       | ✅ API, e2e-tested; submission form to come                       |
 | Image uploads, organiser-defined questions                                                   | ⏳ not started (tables exist)                                     |
@@ -183,6 +184,7 @@ npm run dev            # Postgres in Docker; engine, api (:3001) and web (:3000)
 | `npm run cli -- seed` | Import fixtures + demo data (idempotent)                                             |
 | `npm run db:reset`    | Drop and recreate the dev database, then seed                                        |
 | `npm run acceptance`  | Run the organisers' checker against the Docker stack                                 |
+| `npm run test:ui`     | Click through the organiser pages in a real browser against the running stack        |
 
 How to contribute (layout, rules, review, ownership) is in **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 

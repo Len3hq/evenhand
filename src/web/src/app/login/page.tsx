@@ -20,7 +20,7 @@ export default function LoginPage() {
         email: form.get('email'),
         password: form.get('password'),
       });
-      router.push('/projects');
+      router.push(returnPath() ?? '/projects');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed.');
@@ -57,4 +57,16 @@ export default function LoginPage() {
       </form>
     </section>
   );
+}
+
+/**
+ * Where to go after logging in: the `?next=` path a page sent us here with. Only a path on
+ * this site is accepted ("/x", not "//evil.test" or "https://…"), so the login page cannot be
+ * used to send someone to another site.
+ */
+function returnPath(): string | null {
+  const next = new URLSearchParams(window.location.search).get('next');
+  return next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\')
+    ? next
+    : null;
 }
