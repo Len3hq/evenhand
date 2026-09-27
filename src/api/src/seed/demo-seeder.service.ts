@@ -9,7 +9,8 @@ import type { FixtureFile } from './fixtures.js';
  * Fixed demo tokens. They match the committed .dogfood.toml, so the acceptance checker can
  * run against any fresh `docker compose up`. They contain no `#` (run.py's fallback TOML
  * parser would cut there). They are demo-only: SessionGuard refuses them unless DEMO_MODE=true,
- * and `cli rotate-tokens` (TODO) replaces them for a real event.
+ * and `cli tokens revoke --demo` shuts them for good (a revoked token is not recreated here).
+ * A real deployment issues its own with `cli tokens create`.
  */
 export const DEMO_TOKENS = {
   organizer: 'dev-organizer-7f2a',

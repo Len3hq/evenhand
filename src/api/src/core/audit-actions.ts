@@ -15,6 +15,8 @@ export const AUDIT_ACTIONS = [
   'duplicate.flagged',
   'user.admin_granted',
   'user.password_reset',
+  'token.created',
+  'token.revoked',
   'event.created',
   'event.updated',
   'organizer.added',

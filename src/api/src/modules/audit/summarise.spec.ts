@@ -50,6 +50,23 @@ describe('audit summaries', () => {
     expect(text).toContain('…');
   });
 
+  it('names an API token by its label, never by its secret', () => {
+    expect(
+      summarise(
+        { action: 'token.created', before: null, after: { tokenId: 't1', label: 'ci-export' } },
+        null,
+        'ops@x.test',
+      ),
+    ).toBe('The system issued an API token "ci-export" for "ops@x.test"');
+    expect(
+      summarise(
+        { action: 'token.revoked', before: null, after: { tokenId: 't1', label: 'ci-export' } },
+        null,
+        'ops@x.test',
+      ),
+    ).toBe('The system revoked the API token "ci-export" of "ops@x.test"');
+  });
+
   it('names the person appointed as an organiser', () => {
     expect(
       summarise({ action: 'organizer.added', before: null, after: {} }, 'Ada', 'ben@x.test'),

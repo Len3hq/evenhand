@@ -43,7 +43,10 @@ RUN --mount=type=cache,target=/root/.npm \
 
 # ── 4. runtime ──────────────────────────────────────────────────────────────────
 FROM base AS runtime
-ENV NODE_ENV=production
+# CHECKPOINT_DISABLE: the Prisma CLI (migrate deploy, on every start) otherwise reports its
+# version to checkpoint.prisma.io. The internal network would block it; we do not try at all.
+ENV NODE_ENV=production \
+    CHECKPOINT_DISABLE=1
 WORKDIR /app
 COPY --from=prod-deps /app/node_modules ./node_modules
 # Fail the build (not the offline start) if the schema engine for this OpenSSL is missing.

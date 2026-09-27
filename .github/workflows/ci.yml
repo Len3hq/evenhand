@@ -15,7 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        # The same pinned image as docker-compose.yml.
+        image: postgres:16@sha256:1a6ab3f5345eb6dbe04a1349529caabdb0ab09293a09590fad07b2246bfa4b54
         env:
           POSTGRES_USER: evenhand
           POSTGRES_PASSWORD: evenhand
@@ -27,6 +28,7 @@ jobs:
       DATABASE_URL: postgresql://evenhand:evenhand@localhost:5433/evenhand
       TEST_DATABASE_URL: postgresql://evenhand:evenhand@localhost:5433/evenhand_test
       NEXT_TELEMETRY_DISABLED: '1'
+      CHECKPOINT_DISABLE: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,13 +45,14 @@ jobs:
       - run: npm run build
 
   acceptance:
-    name: docker compose up + run.py
+    name: docker compose up + run.py + browser checks
     runs-on: ubuntu-latest
     needs: check
     steps:
       - uses: actions/checkout@v4
       - run: docker compose up -d --build --wait
       - run: SKIP_UP=1 sh tests/acceptance/run.sh
+      - run: sh tests/ui/run.sh
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -57,3 +60,11 @@ jobs:
           path: acceptance-report.txt
       - if: failure()
         run: docker compose logs --no-color
+
+  offline-drill:
+    name: offline drill (fresh clone, no network)
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - run: sh tests/offline/drill.sh

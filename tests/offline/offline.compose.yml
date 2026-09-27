@@ -1,0 +1,14 @@
+# Offline drill overlay (tests/offline/drill.sh), applied on top of docker-compose.yml:
+# - `edge` becomes internal too, so no container of the stack has a route to the internet;
+# - no published port, so the drill runs beside a stack you already have on :8080;
+# - drill-only image names, so the drill never replaces your evenhand-*:local images.
+networks:
+  edge:
+    internal: true
+
+services:
+  api:
+    image: evenhand-drill-api:local
+  web:
+    image: evenhand-drill-web:local
+    ports: !reset []

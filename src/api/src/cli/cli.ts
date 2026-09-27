@@ -9,6 +9,11 @@
  *   node dist/cli/cli.js export-event <event> [--out <file.json>]
  *                                                    an event in the fixtures.json shape (stdout by default)
  *   node dist/cli/cli.js import <file.json>         load an event file (fixtures.json shape), no demo data
+ *   node dist/cli/cli.js tokens create <email> --label <label>
+ *                                                    a bearer token for scripts; printed once
+ *   node dist/cli/cli.js tokens list [<email>]      tokens with their state (never the secret)
+ *   node dist/cli/cli.js tokens revoke <id> | --demo
+ *                                                    revoke one token, or every demo token
  *
  * In development: `npm run cli -- <command>` from the repo root.
  * In Docker:      `docker compose exec api node dist/cli/cli.js <command>`.
@@ -21,6 +26,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from '../app.module.js';
 import { buildOpenApi, configureApp } from '../app.setup.js';
 import { AuditService } from '../core/audit.service.js';
+import { Clock } from '../core/clock.js';
 import { AppConfig } from '../core/config.js';
 import { CoreModule } from '../core/core.module.js';
 import { PrismaService } from '../core/prisma.service.js';
@@ -31,6 +37,7 @@ import { SeedModule } from '../seed/seed.module.js';
 import { formatLogins, SeedService } from '../seed/seed.service.js';
 import { createAdmin } from './create-admin.js';
 import { resetPassword } from './reset-password.js';
+import { createToken, listTokens, revokeTokens } from './tokens.js';
 
 /** dist/cli/cli.js → repo root data/fixtures.json (same layout in the Docker image). */
 const DEFAULT_FIXTURES = fileURLToPath(new URL('../../../../data/fixtures.json', import.meta.url));
@@ -41,7 +48,10 @@ const USAGE = `usage:
   cli create-admin <email> [--name <name>] [--reset-password]
   cli reset-password <email>
   cli export-event <event> [--out <file.json>]
-  cli import <file.json>`;
+  cli import <file.json>
+  cli tokens create <email> --label <label>
+  cli tokens list [<email>]
+  cli tokens revoke <id> | --demo`;
 
 async function seed(args: string[]): Promise<void> {
   const flag = args.indexOf('--fixtures');
@@ -158,6 +168,65 @@ async function importFile(args: string[]): Promise<void> {
   }
 }
 
+async function tokens(args: string[]): Promise<void> {
+  const [sub, ...rest] = args;
+  const ctx = await NestFactory.createApplicationContext(CoreModule, { logger: ['error'] });
+  try {
+    const prisma = ctx.get(PrismaService);
+    const audit = ctx.get(AuditService);
+    switch (sub) {
+      case 'create': {
+        const email = rest[0];
+        if (!email || email.startsWith('--'))
+          throw new Error('tokens create needs an email address');
+        const labelFlag = rest.indexOf('--label');
+        const label = labelFlag >= 0 ? rest[labelFlag + 1] : undefined;
+        if (!label) throw new Error('tokens create needs --label <label>, e.g. --label ci-export');
+        const t = await createToken(prisma, audit, email, label);
+        process.stdout.write(
+          `token ${t.id} "${t.label}" for ${t.email}\n` +
+            `header (shown once, store it now): Authorization: Bearer ${t.token}\n`,
+        );
+        break;
+      }
+      case 'list': {
+        const rows = await listTokens(prisma, rest[0]);
+        if (!rows.length) {
+          process.stdout.write('no tokens\n');
+          break;
+        }
+        for (const r of rows) {
+          const state = r.revokedAt ? `revoked ${r.revokedAt.toISOString()}` : 'active';
+          const kind = r.isDemo ? ' demo' : '';
+          process.stdout.write(
+            `${r.id}  ${r.email}  "${r.label}"${kind}  created ${r.createdAt.toISOString()}  ${state}\n`,
+          );
+        }
+        break;
+      }
+      case 'revoke': {
+        const target = rest[0];
+        if (!target)
+          throw new Error('tokens revoke needs a token id (see: cli tokens list) or --demo');
+        const ids = await revokeTokens(
+          prisma,
+          audit,
+          ctx.get(Clock),
+          target === '--demo' ? { demo: true } : { id: target },
+        );
+        process.stdout.write(
+          ids.length ? `revoked ${ids.join(' ')}\n` : 'nothing to revoke: already revoked\n',
+        );
+        break;
+      }
+      default:
+        throw new Error('tokens needs create, list or revoke');
+    }
+  } finally {
+    await ctx.close();
+  }
+}
+
 const [command, ...args] = process.argv.slice(2);
 try {
   switch (command) {
@@ -178,6 +247,9 @@ try {
       break;
     case 'import':
       await importFile(args);
+      break;
+    case 'tokens':
+      await tokens(args);
       break;
     default:
       process.stderr.write(`${USAGE}\n`);

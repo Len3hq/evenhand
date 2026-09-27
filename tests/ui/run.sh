@@ -6,7 +6,8 @@
 #
 # Needs the network once, to pull the image and the playwright package (development only;
 # the portal itself never needs it). The browser addresses the portal as localhost:8080, so
-# the API's same-origin (CSRF) check sees exactly what a real browser sends. The checks add
+# the API's same-origin (CSRF) check sees exactly what a real browser sends. --add-host makes
+# host.docker.internal resolve on Linux too (Docker Desktop provides it already). The checks add
 # their own events and accounts; they never change existing ones.
 #
 # The stack allows 10 logins and registrations per minute per address (RATE_LIMIT_LOGIN_PER_MIN)
@@ -14,7 +15,7 @@
 set -eu
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 PLAYWRIGHT=1.55.0
-docker run --rm -v "$ROOT/tests/ui:/ui:ro" "mcr.microsoft.com/playwright:v$PLAYWRIGHT-noble" sh -c "
+docker run --rm --add-host=host.docker.internal:host-gateway -v "$ROOT/tests/ui:/ui:ro" "mcr.microsoft.com/playwright:v$PLAYWRIGHT-noble" sh -c "
   mkdir -p /work && cd /work && cp /ui/*.mjs . &&
   npm init -y >/dev/null && npm i --no-audit --no-fund --loglevel=error playwright@$PLAYWRIGHT >/dev/null &&
   status=0; for f in *.check.mjs; do node \"\$f\" || status=1; done; exit \$status"

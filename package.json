@@ -31,6 +31,7 @@
     "gen:api": "npm run openapi -w @evenhand/api && openapi-typescript src/api/openapi.json -o src/web/src/lib/api/schema.d.ts",
     "cli": "npm run cli -w @evenhand/api --",
     "acceptance": "sh tests/acceptance/run.sh",
+    "drill": "sh tests/offline/drill.sh",
     "test:ui": "sh tests/ui/run.sh"
   },
   "devDependencies": {

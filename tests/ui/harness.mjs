@@ -6,10 +6,12 @@ export const BASE = 'http://localhost:8080';
 
 /** A fresh browser page (its own cookies). Confirm dialogs are accepted. */
 export async function openBrowser() {
+  // The browser uses "localhost:8080" (so the API's Origin check sees the real portal
+  // address) and this container reaches it on the Docker host. The offline drill runs inside
+  // the web container's network instead, where localhost already is the portal (UI_HOST_MAP=off).
+  const map = process.env.UI_HOST_MAP ?? 'host.docker.internal';
   const browser = await chromium.launch({
-    // The browser uses "localhost:8080" (so the API's Origin check sees the real portal
-    // address) and this container reaches it on the Docker host.
-    args: ['--host-resolver-rules=MAP localhost host.docker.internal'],
+    args: map === 'off' ? [] : [`--host-resolver-rules=MAP localhost ${map}`],
   });
   const newPage = async () => {
     const page = await (await browser.newContext()).newPage();

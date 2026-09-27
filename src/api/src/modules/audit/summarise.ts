@@ -93,6 +93,10 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
       return `${who} made ${it} a platform admin`;
     case 'user.password_reset':
       return `${who} reset the password of ${it}`;
+    case 'token.created':
+      return `${who} issued an API token "${str(after.label)}" for ${it}`;
+    case 'token.revoked':
+      return `${who} revoked the API token "${str(after.label)}" of ${it}`;
     default:
       return `${who}: ${entry.action}`;
   }

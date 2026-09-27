@@ -17,3 +17,5 @@ The checker never logs in: it attaches a header we give it. Browsers need a norm
 ## Consequences
 
 Every seeded account shares the demo password in demo mode. A "rotate tokens / disable demo" command is still to be written; until then set `DEMO_MODE=false`.
+
+Update 2026-09-27: written as `cli tokens` ([ADR](20260927-2329-a-api-tokens-and-offline-drill.md)).

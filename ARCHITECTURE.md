@@ -62,14 +62,15 @@ Every API request passes the same layers, in this order (registered in `core/cor
 2. `node dist/cli/cli.js seed`: imports `data/fixtures.json` (idempotent: finds before it creates) and, in demo mode, the demo accounts, the open demo event and fixed tokens; prints the logins. Skipped when `SEED_FIXTURES=false`, as for a real event.
 3. `exec node dist/main.js`.
 
-A real deployment has no default admin and no default password. The first admin is created from the server's shell with `cli create-admin` (README, "Running a real event"): whoever can run commands in the container already controls the database, so the shell is the one place a bootstrap credential adds no new attack surface.
+A real deployment has no default admin and no default password. The first admin is created from the server's shell with `cli create-admin` (README, "Running a real event"): whoever can run commands in the container already controls the database, so the shell is the one place a bootstrap credential adds no new attack surface. API tokens for scripts are issued and revoked the same way (`cli tokens`).
 
 `web` starts only when `api` reports healthy (`/api/healthz` checks the database).
 
 ## Offline and reproducible builds
 
 - Base images are pinned by **multi-arch digest** (amd64 + arm64).
-- Network is used only while building (`npm ci`, `apt-get openssl`). At runtime nothing calls out: no web fonts (system font stack), no image optimiser (`images.unoptimized`), telemetry off, no CDN (Swagger UI assets are served locally).
+- Network is used only while building (`npm ci`, `apt-get openssl`). At runtime nothing calls out: no web fonts (system font stack), no image optimiser (`images.unoptimized`), telemetry off (`NEXT_TELEMETRY_DISABLED`, and `CHECKPOINT_DISABLE` for the Prisma CLI that migrates on every start), no CDN (Swagger UI assets are served locally), and the browser is held to the same origin by the Content-Security-Policy.
+- **The offline drill** (`npm run drill`, `tests/offline/drill.sh`) proves it end to end: a fresh clone is built, then started on empty volumes with every network internal (`tests/offline/offline.compose.yml`); a request to the internet must fail from the api and from the web container's network, and the organisers' `run.py` and every browser check then run inside that network, where `localhost:8080` is the portal and nothing else is reachable.
 - Prisma: the CLI is a runtime dependency (never fetched with `npx`), the client is generated at build time, and the Dockerfile **fails the build** if the schema engine for the runtime's OpenSSL is missing. Otherwise the container would try to download one at start-up. We hit exactly this bug once (details in the Dockerfile).
 - `next build` needs neither the API nor the database: data pages are rendered per request.
 
@@ -102,8 +103,9 @@ Environment variables, validated at start-up (`core/config.ts`; a bad value stop
 | End-to-end | `tests/api/*.e2e-spec.ts` (Vitest + supertest, real Postgres) | The **isolation matrix** (7 actors × every protected route), cookie/CSRF/demo-mode/rate-limit behaviour, deadline with a frozen clock, hand-written SQL constraints, seed idempotency |
 | Acceptance | `tests/acceptance/run.sh`                                     | The organisers' `run.py` against the Docker stack                                                                                                                                     |
 | Browser    | `tests/ui/run.sh`                                             | Playwright's Chromium clicks through every `tests/ui/*.check.mjs` (accounts, gallery, participants, organiser pages) on the Docker stack (`npm run test:ui`)                          |
+| Offline    | `tests/offline/drill.sh`                                      | Fresh clone, empty volumes, network cut and proven cut, then acceptance and browser checks inside the stack's network (`npm run drill`)                                               |
 
-`npm run check` runs everything except acceptance; CI runs acceptance too.
+`npm run check` runs everything except acceptance, the browser checks and the drill; CI runs all of them.
 
 ## Known trade-offs
 
