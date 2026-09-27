@@ -70,6 +70,23 @@ describe('audit summaries', () => {
     );
   });
 
+  it('describes judge invitations and track changes', () => {
+    expect(
+      summarise(
+        { action: 'judge.invited', before: null, after: { maxUses: 1, tracks: ['Games'] } },
+        'Ada',
+        'Hack',
+      ),
+    ).toBe('Ada created a judge invite link (1 use) for Games');
+    expect(
+      summarise(
+        { action: 'judge.tracks_updated', before: { tracks: ['Games'] }, after: { tracks: [] } },
+        'Ada',
+        'ben@x.test',
+      ),
+    ).toBe('Ada changed the tracks "ben@x.test" judges: Games → no tracks');
+  });
+
   it('says "the system" for the seed and command line', () => {
     expect(
       summarise({ action: 'fixtures.imported', before: null, after: {} }, null, 'Sample'),

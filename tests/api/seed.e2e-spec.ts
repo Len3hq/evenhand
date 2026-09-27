@@ -17,7 +17,9 @@ const counts = async () => ({
   events: await t.prisma.event.count({ where: { externalId: { not: null } } }),
   submissions: await t.prisma.submission.count({ where: { externalId: { not: null } } }),
   reviews: await t.prisma.review.count(),
-  judges: await t.prisma.eventRole.count({ where: { role: 'JUDGE' } }),
+  // Fixture judges (with a fixture id), like events and submissions above: other suites
+  // invite judges of their own, which are not part of the import.
+  judges: await t.prisma.eventRole.count({ where: { role: 'JUDGE', externalId: { not: null } } }),
   flags: await t.prisma.duplicateFlag.count(),
   users: await t.prisma.user.count(),
 });

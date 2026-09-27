@@ -111,6 +111,17 @@ await step('a locked rubric (judging started) only offers weights and names', as
   await page.goto(back);
 });
 
+await step('create a judge invite link for a track', async () => {
+  await page.fill('#new-track', 'Judged track');
+  await page.click('button:has-text("Add track")');
+  await page.locator('input[id^="track-"]').first().waitFor();
+  await page.getByText('No judges yet').waitFor();
+  await page.check('label:has-text("Judged track") >> input[name="invite-tracks"]');
+  await page.click('button:has-text("Create judge invite link")');
+  const url = await page.locator('#judge-invite-url').inputValue();
+  if (!url.startsWith(`${BASE}/judge-invites/`)) throw new Error(url);
+});
+
 await step('appoint an organiser, then remove them', async () => {
   // priya1 is the demo participant; she competes in the demo event, not in this one.
   await page.fill('#new-organizer', 'priya1@example.org');
@@ -155,7 +166,8 @@ await step('filter the trail to tracks only', async () => {
   await page.click('button:has-text("Filter")');
   await page.waitForURL(/action=track\./);
   const items = await page.locator('ol > li').count();
-  if (items !== 3) throw new Error(`expected 3 track entries, got ${items}`);
+  // Climate added, renamed, removed; "Judged track" added for the judge invite.
+  if (items !== 4) throw new Error(`expected 4 track entries, got ${items}`);
 });
 
 await browser.close();

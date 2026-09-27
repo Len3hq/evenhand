@@ -1,6 +1,7 @@
 // A team's path in a real browser: register, start a team, invite a teammate by link, draft,
 // submit, appear in the gallery, keep editing. Uses the open demo event. Run with
 // `npm run test:ui`.
+/* global fetch -- used inside page callbacks, which run in the browser */
 import { BASE, finish, openBrowser, step } from './harness.mjs';
 
 const { browser, newPage } = await openBrowser();
@@ -101,6 +102,48 @@ await step('Ben improves it after submitting; it stays submitted', async () => {
 await step('My teams shows the team and its submitted project', async () => {
   await ann.goto(`${BASE}/teams`);
   await ann.getByText(`“${title}” (submitted)`).waitFor();
+});
+
+await step('Ben accepts a judge invitation for another event', async () => {
+  // The organiser sets it up through the API with the demo bearer token (no extra login).
+  // Sent from Ben's page so it reaches the portal the same way; the bearer token, not his
+  // cookie, decides who is calling.
+  const asOrganizer = (path, data) =>
+    ben.evaluate(
+      async ([p, d]) =>
+        (
+          await fetch(p, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer dev-organizer-7f2a',
+            },
+            body: JSON.stringify(d),
+          })
+        ).json(),
+      [path, data],
+    );
+  const event = await asOrganizer('/api/events', {
+    name: `Judged by Ben ${stamp}`,
+    submissionsClose: '2031-06-01T18:00:00Z',
+  });
+  const track = await asOrganizer(`/api/events/${event.slug}/tracks`, { name: 'Games' });
+  const invite = await asOrganizer(`/api/events/${event.slug}/judge-invites`, {
+    tracks: [track.id],
+  });
+
+  await ben.goto(`${BASE}${invite.path}`);
+  await ben.getByText('Tracks: Games').waitFor();
+  await ben.click(`button:has-text("Judge Judged by Ben ${stamp}")`);
+  await ben.waitForURL(`${BASE}/judging`);
+  await ben.getByText(`Judged by Ben ${stamp}`).waitFor();
+  await ben.locator('header >> text=Judging').waitFor();
+});
+
+await step('a judge cannot also join a team in that event', async () => {
+  await ben.goto(`${BASE}/teams`);
+  const options = await ben.locator('#event option').allInnerTexts();
+  if (options.some((o) => o.startsWith('Judged by Ben'))) throw new Error('offered a team there');
 });
 
 await step('a broken invite link says so', async () => {

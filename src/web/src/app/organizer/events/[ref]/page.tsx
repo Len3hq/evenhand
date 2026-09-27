@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { EventForm } from '@/components/organizer/event-form';
+import { JudgesEditor } from '@/components/organizer/judges-editor';
 import { OrganizersEditor } from '@/components/organizer/organizers-editor';
 import { formatUtc } from '@/lib/dates';
 import { PrizesEditor } from '@/components/organizer/prizes-editor';
@@ -37,9 +38,10 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
     );
   }
 
-  const [organizers, rubric] = await Promise.all([
+  const [organizers, rubric, judges] = await Promise.all([
     apiGet<Schemas['OrganizerDto'][]>(`/api/events/${event.id}/organizers`),
     apiGet<Schemas['RubricDto']>(`/api/events/${event.id}/criteria`),
+    apiGet<Schemas['JudgeDto'][]>(`/api/events/${event.id}/judges`),
   ]);
 
   const downloads = [
@@ -93,6 +95,15 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
           see this rubric.
         </p>
         <RubricEditor eventId={event.id} rubric={rubric} />
+      </Card>
+
+      <Card>
+        <h2 className="mb-1 text-lg font-semibold">Judges</h2>
+        <p className="mb-4 text-sm text-muted">
+          Judges see and score only their tracks, and never each other&apos;s scores. Nobody on a
+          team in this event, or organising it, can judge it.
+        </p>
+        <JudgesEditor eventId={event.id} judges={judges} tracks={event.tracks} />
       </Card>
 
       <Card>

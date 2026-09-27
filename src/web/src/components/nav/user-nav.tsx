@@ -22,11 +22,17 @@ export function UserNav({ me }: { me: Schemas['MeDto'] | null }) {
     );
   }
   const organises = me.isAdmin || me.roles.some((r) => r.role === 'ORGANIZER');
+  const judges = me.roles.some((r) => r.role === 'JUDGE');
   return (
     <div className="ml-auto flex items-center gap-4">
       <Link href="/teams" className={link}>
         My teams
       </Link>
+      {judges ? (
+        <Link href="/judging" className={link}>
+          Judging
+        </Link>
+      ) : null}
       {organises ? (
         <Link href="/organizer" className={link}>
           Organise

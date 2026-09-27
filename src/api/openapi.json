@@ -1344,6 +1344,228 @@
           "export"
         ]
       }
+    },
+    "/api/events/{eventRef}/judge-invites": {
+      "post": {
+        "operationId": "JudgesController_createInvite",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateJudgeInviteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JudgeInviteDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "A judge invite link for chosen tracks (1 use by default, up to 50 for a panel; 7 days by\ndefault). The token is in this response only. The event's organisers and admins.",
+        "tags": [
+          "judges"
+        ]
+      }
+    },
+    "/api/judge-invites/{token}": {
+      "get": {
+        "operationId": "JudgesController_preview",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JudgeInvitePreviewDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "What a judge invite is for. Public; does not use it. 410 when expired or used up.",
+        "tags": [
+          "judges"
+        ]
+      },
+      "post": {
+        "operationId": "JudgesController_accept",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinedAsJudgeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Become a judge of the event. Refused for anyone on a team in it or organising it\n(409 `conflict_of_interest`), existing judges (409) and after judging closes (403).",
+        "tags": [
+          "judges"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/judges": {
+      "get": {
+        "operationId": "JudgesController_list",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JudgeDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "The event's judges with their tracks and progress. Its organisers and admins.",
+        "tags": [
+          "judges"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/judges/{judgeRef}/tracks": {
+      "put": {
+        "operationId": "JudgesController_setTracks",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "judgeRef",
+            "required": true,
+            "in": "path",
+            "description": "Judge id or fixture id (jdg_24).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JudgeTracksDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JudgeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Change the tracks a judge covers.",
+        "tags": [
+          "judges"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/judges/{judgeRef}": {
+      "delete": {
+        "operationId": "JudgesController_remove",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "judgeRef",
+            "required": true,
+            "in": "path",
+            "description": "Judge id or fixture id (jdg_24).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Remove a judge who has not reviewed anything (409 `judge_has_reviews` otherwise).",
+        "tags": [
+          "judges"
+        ]
+      }
     }
   },
   "info": {
@@ -2843,6 +3065,202 @@
           "page",
           "pageSize",
           "total"
+        ]
+      },
+      "CreateJudgeInviteDto": {
+        "type": "object",
+        "properties": {
+          "tracks": {
+            "description": "Tracks the judge will cover (ids or fixture ids). Required when the event has tracks.",
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          "maxUses": {
+            "type": "number",
+            "description": "How many people can accept it: 1 for one person (default), more for a panel link.",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "days": {
+            "type": "number",
+            "description": "Days until it expires (default 7).",
+            "minimum": 1,
+            "maximum": 30
+          }
+        },
+        "required": [
+          "tracks"
+        ]
+      },
+      "JudgeTrackRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "name"
+        ]
+      },
+      "JudgeInviteDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The secret. Shown only in this response; the server keeps a hash."
+          },
+          "path": {
+            "type": "string",
+            "description": "Path to share, e.g. /judge-invites/<token>."
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "maxUses": {
+            "type": "number"
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JudgeTrackRefDto"
+            }
+          }
+        },
+        "required": [
+          "token",
+          "path",
+          "expiresAt",
+          "maxUses",
+          "tracks"
+        ]
+      },
+      "JudgeInvitePreviewDto": {
+        "type": "object",
+        "properties": {
+          "eventName": {
+            "type": "string"
+          },
+          "eventSlug": {
+            "type": "string"
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "usesLeft": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "eventName",
+          "eventSlug",
+          "tracks",
+          "expiresAt",
+          "usesLeft"
+        ]
+      },
+      "JoinedAsJudgeDto": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "eventSlug": {
+            "type": "string"
+          },
+          "judgeId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId",
+          "eventSlug",
+          "judgeId"
+        ]
+      },
+      "JudgeDto": {
+        "type": "object",
+        "properties": {
+          "judgeId": {
+            "type": "string",
+            "description": "The judge's id in this event (their event role)."
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fixture id (e.g. jdg_24) for judges imported from fixtures.json."
+          },
+          "userId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JudgeTrackRefDto"
+            }
+          },
+          "assigned": {
+            "type": "number",
+            "description": "Projects assigned to them, and how many of those they have finished."
+          },
+          "finished": {
+            "type": "number"
+          },
+          "since": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "judgeId",
+          "externalId",
+          "userId",
+          "name",
+          "email",
+          "tracks",
+          "assigned",
+          "finished",
+          "since"
+        ]
+      },
+      "JudgeTracksDto": {
+        "type": "object",
+        "properties": {
+          "tracks": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 100
+            }
+          }
+        },
+        "required": [
+          "tracks"
         ]
       }
     }

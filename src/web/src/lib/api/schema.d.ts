@@ -569,6 +569,98 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events/{eventRef}/judge-invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A judge invite link for chosen tracks (1 use by default, up to 50 for a panel; 7 days by
+         *     default). The token is in this response only. The event's organisers and admins.
+         */
+        post: operations["JudgesController_createInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/judge-invites/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What a judge invite is for. Public; does not use it. 410 when expired or used up. */
+        get: operations["JudgesController_preview"];
+        put?: never;
+        /**
+         * Become a judge of the event. Refused for anyone on a team in it or organising it
+         *     (409 `conflict_of_interest`), existing judges (409) and after judging closes (403).
+         */
+        post: operations["JudgesController_accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{eventRef}/judges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The event's judges with their tracks and progress. Its organisers and admins. */
+        get: operations["JudgesController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{eventRef}/judges/{judgeRef}/tracks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change the tracks a judge covers. */
+        put: operations["JudgesController_setTracks"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{eventRef}/judges/{judgeRef}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a judge who has not reviewed anything (409 `judge_has_reviews` otherwise). */
+        delete: operations["JudgesController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -964,6 +1056,57 @@ export interface components {
             page: number;
             pageSize: number;
             total: number;
+        };
+        CreateJudgeInviteDto: {
+            /** @description Tracks the judge will cover (ids or fixture ids). Required when the event has tracks. */
+            tracks: string[];
+            /** @description How many people can accept it: 1 for one person (default), more for a panel link. */
+            maxUses?: number;
+            /** @description Days until it expires (default 7). */
+            days?: number;
+        };
+        JudgeTrackRefDto: {
+            id: string;
+            externalId: string | null;
+            name: string;
+        };
+        JudgeInviteDto: {
+            /** @description The secret. Shown only in this response; the server keeps a hash. */
+            token: string;
+            /** @description Path to share, e.g. /judge-invites/<token>. */
+            path: string;
+            expiresAt: string;
+            maxUses: number;
+            tracks: components["schemas"]["JudgeTrackRefDto"][];
+        };
+        JudgeInvitePreviewDto: {
+            eventName: string;
+            eventSlug: string;
+            tracks: string[];
+            expiresAt: string;
+            usesLeft: number;
+        };
+        JoinedAsJudgeDto: {
+            eventId: string;
+            eventSlug: string;
+            judgeId: string;
+        };
+        JudgeDto: {
+            /** @description The judge's id in this event (their event role). */
+            judgeId: string;
+            /** @description Fixture id (e.g. jdg_24) for judges imported from fixtures.json. */
+            externalId: string | null;
+            userId: string;
+            name: string;
+            email: string;
+            tracks: components["schemas"]["JudgeTrackRefDto"][];
+            /** @description Projects assigned to them, and how many of those they have finished. */
+            assigned: number;
+            finished: number;
+            since: string;
+        };
+        JudgeTracksDto: {
+            tracks: string[];
         };
     };
     responses: never;
@@ -1859,6 +2002,146 @@ export interface operations {
                 content: {
                     "application/json": Record<string, never>;
                 };
+            };
+        };
+    };
+    JudgesController_createInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateJudgeInviteDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeInviteDto"];
+                };
+            };
+        };
+    };
+    JudgesController_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeInvitePreviewDto"];
+                };
+            };
+        };
+    };
+    JudgesController_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JoinedAsJudgeDto"];
+                };
+            };
+        };
+    };
+    JudgesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeDto"][];
+                };
+            };
+        };
+    };
+    JudgesController_setTracks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+                /** @description Judge id or fixture id (jdg_24). */
+                judgeRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JudgeTracksDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeDto"];
+                };
+            };
+        };
+    };
+    JudgesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+                /** @description Judge id or fixture id (jdg_24). */
+                judgeRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

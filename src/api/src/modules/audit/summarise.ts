@@ -29,6 +29,14 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
       return `${who} removed ${it} as an organiser`;
     case 'rubric.updated':
       return `${who} changed the rubric: ${rubricChanges(entry.before, entry.after)}`;
+    case 'judge.invited':
+      return `${who} created a judge invite link (${show(after.maxUses)} use${after.maxUses === 1 ? '' : 's'}) for ${list(after.tracks)}`;
+    case 'judge.joined':
+      return `${who} joined as a judge for ${list(after.tracks)}`;
+    case 'judge.tracks_updated':
+      return `${who} changed the tracks ${it} judges: ${list(asRecord(entry.before).tracks)} → ${list(after.tracks)}`;
+    case 'judge.removed':
+      return `${who} removed the judge ${it}`;
     case 'track.created':
       return `${who} added the track ${it}`;
     case 'track.updated':
@@ -126,6 +134,10 @@ function show(v: unknown): string {
   }
   return String(v);
 }
+
+/** "Games, Tools", or "no tracks". */
+const list = (v: unknown): string =>
+  Array.isArray(v) && v.length ? v.map(String).join(', ') : 'no tracks';
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : String(v ?? '?'));
 
