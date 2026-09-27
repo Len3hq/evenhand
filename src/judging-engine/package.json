@@ -21,7 +21,8 @@
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "proof": "npm run build && node scripts/proof.mjs"
   },
   "devDependencies": {
     "vitest": "4.1.11"
