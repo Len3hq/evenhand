@@ -333,6 +333,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events/{eventRef}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Judging progress per judge and per project, with judges who gave every project exactly the
+         *     same marks flagged. The event's organisers and admins; the dashboard polls it.
+         */
+        get: operations["ProgressController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -737,6 +757,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events/{eventRef}/export/teams.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One row per team member (teams without members get one empty row). */
+        get: operations["ExportsController_teams"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{eventRef}/export/submissions.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every submission: status, eligibility, links, duplicate state. */
+        get: operations["ExportsController_submissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{eventRef}/export/assignments.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Who reviews what: batch, queue position and state. */
+        get: operations["ExportsController_assignments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1043,6 +1114,53 @@ export interface components {
                 [key: string]: unknown;
             };
             comment?: string;
+        };
+        ProgressTotalsDto: {
+            judges: number;
+            /** @description Judges with work assigned who have not saved anything yet. */
+            judgesNotStarted: number;
+            projects: number;
+            /** @description Projects with no finished review yet. */
+            projectsUnreviewed: number;
+            assignments: number;
+            finished: number;
+            drafts: number;
+            notStarted: number;
+        };
+        ProgressJudgeDto: {
+            judgeId: string;
+            /** @description Fixture id (e.g. jdg_07) for judges imported from fixtures.json. */
+            externalId: string | null;
+            name: string;
+            email: string;
+            tracks: string[];
+            assigned: number;
+            finished: number;
+            drafts: number;
+            notStarted: number;
+            /** @description When they last saved or submitted anything; null if they have not started. */
+            lastActivity: string | null;
+            /**
+             * @description Gave every project exactly the same marks across 3+ final reviews: their marks say nothing
+             *     about how projects differ. (Different marks that average out equal are not flagged.)
+             */
+            flat: boolean;
+        };
+        ProgressProjectDto: {
+            projectId: string;
+            externalId: string | null;
+            title: string;
+            track: string | null;
+            assigned: number;
+            finished: number;
+            drafts: number;
+        };
+        ProgressDto: {
+            generatedAt: string;
+            judgingClose: string | null;
+            totals: components["schemas"]["ProgressTotalsDto"];
+            judges: components["schemas"]["ProgressJudgeDto"][];
+            projects: components["schemas"]["ProgressProjectDto"][];
         };
         EventDto: {
             id: string;
@@ -1773,6 +1891,28 @@ export interface operations {
             };
         };
     };
+    ProgressController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressDto"];
+                };
+            };
+        };
+    };
     EventsController_list: {
         parameters: {
             query?: never;
@@ -2443,6 +2583,66 @@ export interface operations {
         requestBody?: never;
         responses: {
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExportsController_teams: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExportsController_submissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExportsController_assignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

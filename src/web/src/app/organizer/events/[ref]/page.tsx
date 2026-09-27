@@ -50,6 +50,9 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
       href: `/api/events/${event.slug}/export.json`,
       label: 'Whole event (JSON, fixtures.json shape)',
     },
+    { href: `/api/events/${event.slug}/export/teams.csv`, label: 'Teams and members (CSV)' },
+    { href: `/api/events/${event.slug}/export/submissions.csv`, label: 'Submissions (CSV)' },
+    { href: `/api/events/${event.slug}/export/assignments.csv`, label: 'Assignments (CSV)' },
     { href: `/api/events/${event.slug}/export/scores.csv`, label: 'Scores (CSV)' },
     { href: `/api/events/${event.slug}/export/audit.csv`, label: 'Audit trail (CSV)' },
   ];
@@ -68,6 +71,10 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
         </div>
         <p className="mt-1 text-sm text-muted">
           /{event.slug} · closes {formatUtc(event.submissionsClose)} ·{' '}
+          <Link href={`/organizer/events/${event.slug}/progress`} className="underline">
+            Judging progress
+          </Link>{' '}
+          ·{' '}
           <Link href={`/organizer/events/${event.slug}/audit`} className="underline">
             Audit trail
           </Link>

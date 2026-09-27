@@ -10,6 +10,7 @@ import { TeamsModule } from './modules/teams/teams.module.js';
 import { AuditLogModule } from './modules/audit/audit-log.module.js';
 import { TransferModule } from './modules/transfer/transfer.module.js';
 import { JudgesModule } from './modules/judges/judges.module.js';
+import { ExportsModule } from './modules/exports/exports.module.js';
 
 // Hot file: append one import line per module, never reorder (CONTRIBUTING.md §4).
 @Module({
@@ -25,6 +26,7 @@ import { JudgesModule } from './modules/judges/judges.module.js';
     AuditLogModule,
     TransferModule,
     JudgesModule,
+    ExportsModule,
   ],
 })
 export class AppModule {}

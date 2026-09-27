@@ -672,6 +672,38 @@
         ]
       }
     },
+    "/api/events/{eventRef}/progress": {
+      "get": {
+        "operationId": "ProgressController_get",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Judging progress per judge and per project, with judges who gave every project exactly the\nsame marks flagged. The event's organisers and admins; the dashboard polls it.",
+        "tags": [
+          "judging"
+        ]
+      }
+    },
     "/api/events": {
       "get": {
         "operationId": "EventsController_list",
@@ -1732,6 +1764,81 @@
         "summary": "Remove a judge who has not reviewed anything (409 `judge_has_reviews` otherwise).",
         "tags": [
           "judges"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/export/teams.csv": {
+      "get": {
+        "operationId": "ExportsController_teams",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "One row per team member (teams without members get one empty row).",
+        "tags": [
+          "export"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/export/submissions.csv": {
+      "get": {
+        "operationId": "ExportsController_submissions",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Every submission: status, eligibility, links, duplicate state.",
+        "tags": [
+          "export"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/export/assignments.csv": {
+      "get": {
+        "operationId": "ExportsController_assignments",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Who reviews what: batch, queue position and state.",
+        "tags": [
+          "export"
         ]
       }
     }
@@ -2882,6 +2989,177 @@
         },
         "required": [
           "values"
+        ]
+      },
+      "ProgressTotalsDto": {
+        "type": "object",
+        "properties": {
+          "judges": {
+            "type": "number"
+          },
+          "judgesNotStarted": {
+            "type": "number",
+            "description": "Judges with work assigned who have not saved anything yet."
+          },
+          "projects": {
+            "type": "number"
+          },
+          "projectsUnreviewed": {
+            "type": "number",
+            "description": "Projects with no finished review yet."
+          },
+          "assignments": {
+            "type": "number"
+          },
+          "finished": {
+            "type": "number"
+          },
+          "drafts": {
+            "type": "number"
+          },
+          "notStarted": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "judges",
+          "judgesNotStarted",
+          "projects",
+          "projectsUnreviewed",
+          "assignments",
+          "finished",
+          "drafts",
+          "notStarted"
+        ]
+      },
+      "ProgressJudgeDto": {
+        "type": "object",
+        "properties": {
+          "judgeId": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fixture id (e.g. jdg_07) for judges imported from fixtures.json."
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "assigned": {
+            "type": "number"
+          },
+          "finished": {
+            "type": "number"
+          },
+          "drafts": {
+            "type": "number"
+          },
+          "notStarted": {
+            "type": "number"
+          },
+          "lastActivity": {
+            "type": "string",
+            "nullable": true,
+            "description": "When they last saved or submitted anything; null if they have not started."
+          },
+          "flat": {
+            "type": "boolean",
+            "description": "Gave every project exactly the same marks across 3+ final reviews: their marks say nothing\nabout how projects differ. (Different marks that average out equal are not flagged.)"
+          }
+        },
+        "required": [
+          "judgeId",
+          "externalId",
+          "name",
+          "email",
+          "tracks",
+          "assigned",
+          "finished",
+          "drafts",
+          "notStarted",
+          "lastActivity",
+          "flat"
+        ]
+      },
+      "ProgressProjectDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string"
+          },
+          "track": {
+            "type": "string",
+            "nullable": true
+          },
+          "assigned": {
+            "type": "number"
+          },
+          "finished": {
+            "type": "number"
+          },
+          "drafts": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "projectId",
+          "externalId",
+          "title",
+          "track",
+          "assigned",
+          "finished",
+          "drafts"
+        ]
+      },
+      "ProgressDto": {
+        "type": "object",
+        "properties": {
+          "generatedAt": {
+            "type": "string"
+          },
+          "judgingClose": {
+            "type": "string",
+            "nullable": true
+          },
+          "totals": {
+            "$ref": "#/components/schemas/ProgressTotalsDto"
+          },
+          "judges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProgressJudgeDto"
+            }
+          },
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProgressProjectDto"
+            }
+          }
+        },
+        "required": [
+          "generatedAt",
+          "judgingClose",
+          "totals",
+          "judges",
+          "projects"
         ]
       },
       "EventDto": {

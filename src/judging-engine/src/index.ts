@@ -10,3 +10,4 @@ export {
   type AssignResult,
   type NewAssignment,
 } from './assign.js';
+export { FLAT_MIN_REVIEWS, isFlat, mean, spread } from './stats.js';

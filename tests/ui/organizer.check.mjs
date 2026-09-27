@@ -131,6 +131,26 @@ await step('run assignment on the fixture event and read what it did', async () 
   await page.goto(back);
 });
 
+await step('the live progress dashboard flags the flat judge and refreshes by itself', async () => {
+  const back = page.url();
+  await page.goto(`${BASE}/organizer/events/evt_01`);
+  await page.click('text=Judging progress');
+  await page.getByRole('heading', { name: 'Judging progress' }).waitFor();
+  // jdg_07 gave every project 4/4/4 in fixtures.json.
+  await page
+    .locator('tr:has-text("Iva Petrova")')
+    .getByText('same marks for every project')
+    .waitFor();
+  const before = await page.locator('#progress-updated').innerText();
+  // It polls every 10 s: the time it shows (to the second) must change without a reload.
+  await page.waitForFunction(
+    (prev) => document.querySelector('#progress-updated')?.textContent !== prev,
+    before,
+    { timeout: 15000 },
+  );
+  await page.goto(back);
+});
+
 await step('appoint an organiser, then remove them', async () => {
   // priya1 is the demo participant; she competes in the demo event, not in this one.
   await page.fill('#new-organizer', 'priya1@example.org');

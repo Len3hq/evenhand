@@ -47,6 +47,8 @@ On the fixtures: 8 new assignments bring the eight projects that only two judges
 
 **Judge console (implemented).** `/judging` lists a judge's queue in each event they judge, with progress; each project opens on its own page with the rubric (marks as buttons, each criterion's share shown), a comment, and Previous / Next along the queue. Drafts save as the judge works and may be partial; each mark is checked against the rubric. Submitting needs every criterion marked and is final. Nothing can be written after judging closes. A judge reaches only their own assignments: anyone else, the event's organisers included, gets the same 403 whether or not an assignment exists. The trail records when a review is started and submitted (with the marks), not every draft save ([ADR](docs/decisions/20260927-2121-b-judge-console.md)).
 
+**Progress dashboard (implemented).** `/organizer/events/:event/progress` shows, per judge, what is submitted, in draft and not started, with their last activity, and per project how many reviews are in; it refreshes every 10 seconds. Only projects in judging count. A judge who gave **exactly the same marks** to at least three projects is flagged ("same marks for every project"): on the fixtures that is jdg_07 (4/4/4 three times) and nobody else. Identical _averages_ are not enough: jdg_19's 3/5/3, 3/4/4 and 5/4/2 all average 3.67, yet that judge clearly told the projects apart ([ADR](docs/decisions/20260927-2144-b-progress-and-flat-judges.md)).
+
 ## 4. Normalization ⏳ (B)
 
 A **joint additive model**, fitted by ridge-penalised least squares (decision 10):
