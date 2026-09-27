@@ -41,6 +41,10 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
       const short = Number(after.shortfalls ?? 0);
       return `${who} ran assignment (${show(after.target)} reviews per project, seed ${show(after.seed)}): ${show(after.added)} new assignment${after.added === 1 ? '' : 's'}${short ? `; ${short} project${short === 1 ? '' : 's'} cannot reach the target` : ''}`;
     }
+    case 'review.started':
+      return `${who} started reviewing ${it}`;
+    case 'review.submitted':
+      return `${who} submitted a review of ${it}: ${marks(after.values)}`;
     case 'track.created':
       return `${who} added the track ${it}`;
     case 'track.updated':
@@ -138,6 +142,12 @@ function show(v: unknown): string {
   }
   return String(v);
 }
+
+/** "functionality 4, quality 3". */
+const marks = (v: unknown): string =>
+  Object.entries(asRecord(v))
+    .map(([k, x]) => `${k} ${show(x)}`)
+    .join(', ') || 'no marks';
 
 /** "Games, Tools", or "no tracks". */
 const list = (v: unknown): string =>

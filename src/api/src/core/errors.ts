@@ -35,6 +35,7 @@ export const ERROR_CODES = [
   'already_judge',
   'judging_closed',
   'judge_has_reviews',
+  'review_final',
   'team_name_taken',
   'invite_expired',
   'invite_used_up',

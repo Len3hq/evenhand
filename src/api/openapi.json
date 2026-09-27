@@ -546,6 +546,132 @@
         ]
       }
     },
+    "/api/judge/queue": {
+      "get": {
+        "operationId": "ReviewsController_queue",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JudgeQueueDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Your assigned projects in every event you judge, in queue order, with progress.",
+        "tags": [
+          "judging"
+        ]
+      }
+    },
+    "/api/judge/reviews/{assignmentId}": {
+      "get": {
+        "operationId": "ReviewsController_get",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "description": "An assignment from your queue.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "One of your assignments: the project, the rubric and your review so far.",
+        "tags": [
+          "judging"
+        ]
+      },
+      "put": {
+        "operationId": "ReviewsController_save",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "description": "An assignment from your queue.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Save your draft (marks may be missing; null clears one). 409 `review_final` once submitted,\n403 `judging_closed` after judging closes.",
+        "tags": [
+          "judging"
+        ]
+      }
+    },
+    "/api/judge/reviews/{assignmentId}/submit": {
+      "post": {
+        "operationId": "ReviewsController_submit",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "description": "An assignment from your queue.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Submit the review: every criterion marked. Final; submitting again changes nothing.",
+        "tags": [
+          "judging"
+        ]
+      }
+    },
     "/api/events": {
       "get": {
         "operationId": "EventsController_list",
@@ -2470,6 +2596,292 @@
           "judges",
           "shortfalls",
           "components"
+        ]
+      },
+      "QueueItemDto": {
+        "type": "object",
+        "properties": {
+          "assignmentId": {
+            "type": "string"
+          },
+          "position": {
+            "type": "number",
+            "description": "Position in this judge's queue for the event, from 0."
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "track": {
+            "type": "string",
+            "nullable": true
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "FINAL",
+              "NOT_STARTED"
+            ]
+          }
+        },
+        "required": [
+          "assignmentId",
+          "position",
+          "projectId",
+          "title",
+          "track",
+          "state"
+        ]
+      },
+      "QueueEventDto": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "eventName": {
+            "type": "string"
+          },
+          "eventSlug": {
+            "type": "string"
+          },
+          "judgingClose": {
+            "type": "string",
+            "nullable": true
+          },
+          "judgingOpen": {
+            "type": "boolean",
+            "description": "False once judging has closed: reviews can then no longer change."
+          },
+          "assigned": {
+            "type": "number"
+          },
+          "finished": {
+            "type": "number"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QueueItemDto"
+            }
+          }
+        },
+        "required": [
+          "eventId",
+          "eventName",
+          "eventSlug",
+          "judgingClose",
+          "judgingOpen",
+          "assigned",
+          "finished",
+          "items"
+        ]
+      },
+      "JudgeQueueDto": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QueueEventDto"
+            }
+          }
+        },
+        "required": [
+          "events"
+        ]
+      },
+      "ReviewProjectDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "tagline": {
+            "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "repoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "demoVideoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "liveUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "techTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "track": {
+            "type": "string",
+            "nullable": true
+          },
+          "teamName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "tagline",
+          "summary",
+          "description",
+          "repoUrl",
+          "demoVideoUrl",
+          "liveUrl",
+          "techTags",
+          "track",
+          "teamName"
+        ]
+      },
+      "ReviewCriterionDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "share": {
+            "type": "number",
+            "description": "Share of the score, weight / sum of weights."
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "min",
+          "max",
+          "share"
+        ]
+      },
+      "ReviewDto": {
+        "type": "object",
+        "properties": {
+          "assignmentId": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "eventName": {
+            "type": "string"
+          },
+          "position": {
+            "type": "number"
+          },
+          "queueLength": {
+            "type": "number",
+            "description": "Assignments in this judge's queue for the event."
+          },
+          "previousAssignmentId": {
+            "type": "string",
+            "nullable": true
+          },
+          "nextAssignmentId": {
+            "type": "string",
+            "nullable": true
+          },
+          "judgingOpen": {
+            "type": "boolean"
+          },
+          "project": {
+            "$ref": "#/components/schemas/ReviewProjectDto"
+          },
+          "criteria": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewCriterionDto"
+            }
+          },
+          "state": {
+            "enum": [
+              "DRAFT",
+              "FINAL",
+              "NOT_STARTED"
+            ],
+            "type": "string"
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "comment": {
+            "type": "string"
+          },
+          "weightedScore": {
+            "type": "number",
+            "nullable": true,
+            "description": "Weighted score once every criterion is marked, else null."
+          },
+          "submittedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "assignmentId",
+          "eventId",
+          "eventName",
+          "position",
+          "queueLength",
+          "previousAssignmentId",
+          "nextAssignmentId",
+          "judgingOpen",
+          "project",
+          "criteria",
+          "state",
+          "values",
+          "comment",
+          "weightedScore",
+          "submittedAt"
+        ]
+      },
+      "SaveReviewDto": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Marks by criterion key. A draft may leave some out (or send null to clear one); each mark\nmust be a whole number inside its criterion's range."
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 5000
+          }
+        },
+        "required": [
+          "values"
         ]
       },
       "EventDto": {

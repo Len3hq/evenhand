@@ -278,6 +278,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/judge/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Your assigned projects in every event you judge, in queue order, with progress. */
+        get: operations["ReviewsController_queue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/judge/reviews/{assignmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One of your assignments: the project, the rubric and your review so far. */
+        get: operations["ReviewsController_get"];
+        /**
+         * Save your draft (marks may be missing; null clears one). 409 `review_final` once submitted,
+         *     403 `judging_closed` after judging closes.
+         */
+        put: operations["ReviewsController_save"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/judge/reviews/{assignmentId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit the review: every criterion marked. Final; submitting again changes nothing. */
+        post: operations["ReviewsController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -911,6 +966,83 @@ export interface components {
              *     compared with the others'.
              */
             components: number;
+        };
+        QueueItemDto: {
+            assignmentId: string;
+            /** @description Position in this judge's queue for the event, from 0. */
+            position: number;
+            projectId: string;
+            title: string;
+            track: string | null;
+            /** @enum {string} */
+            state: "DRAFT" | "FINAL" | "NOT_STARTED";
+        };
+        QueueEventDto: {
+            eventId: string;
+            eventName: string;
+            eventSlug: string;
+            judgingClose: string | null;
+            /** @description False once judging has closed: reviews can then no longer change. */
+            judgingOpen: boolean;
+            assigned: number;
+            finished: number;
+            items: components["schemas"]["QueueItemDto"][];
+        };
+        JudgeQueueDto: {
+            events: components["schemas"]["QueueEventDto"][];
+        };
+        ReviewProjectDto: {
+            id: string;
+            title: string;
+            tagline: string | null;
+            summary: string | null;
+            description: string | null;
+            repoUrl: string | null;
+            demoVideoUrl: string | null;
+            liveUrl: string | null;
+            techTags: string[];
+            track: string | null;
+            teamName: string;
+        };
+        ReviewCriterionDto: {
+            key: string;
+            label: string;
+            min: number;
+            max: number;
+            /** @description Share of the score, weight / sum of weights. */
+            share: number;
+        };
+        ReviewDto: {
+            assignmentId: string;
+            eventId: string;
+            eventName: string;
+            position: number;
+            /** @description Assignments in this judge's queue for the event. */
+            queueLength: number;
+            previousAssignmentId: string | null;
+            nextAssignmentId: string | null;
+            judgingOpen: boolean;
+            project: components["schemas"]["ReviewProjectDto"];
+            criteria: components["schemas"]["ReviewCriterionDto"][];
+            /** @enum {string} */
+            state: "DRAFT" | "FINAL" | "NOT_STARTED";
+            values: {
+                [key: string]: number;
+            };
+            comment: string;
+            /** @description Weighted score once every criterion is marked, else null. */
+            weightedScore: number | null;
+            submittedAt: string | null;
+        };
+        SaveReviewDto: {
+            /**
+             * @description Marks by criterion key. A draft may leave some out (or send null to clear one); each mark
+             *     must be a whole number inside its criterion's range.
+             */
+            values: {
+                [key: string]: unknown;
+            };
+            comment?: string;
         };
         EventDto: {
             id: string;
@@ -1548,6 +1680,95 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssignmentRunDto"];
+                };
+            };
+        };
+    };
+    ReviewsController_queue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeQueueDto"];
+                };
+            };
+        };
+    };
+    ReviewsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description An assignment from your queue. */
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewDto"];
+                };
+            };
+        };
+    };
+    ReviewsController_save: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description An assignment from your queue. */
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveReviewDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewDto"];
+                };
+            };
+        };
+    };
+    ReviewsController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description An assignment from your queue. */
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewDto"];
                 };
             };
         };
