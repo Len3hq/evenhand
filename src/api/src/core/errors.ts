@@ -22,6 +22,7 @@ export const ERROR_CODES = [
   'submissions_closed',
   'submissions_not_open',
   'team_already_has_submission',
+  'submission_superseded',
   'email_taken',
   'slug_taken',
   'track_name_taken',

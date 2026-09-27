@@ -251,6 +251,110 @@
         ]
       }
     },
+    "/api/submissions/{ref}": {
+      "get": {
+        "operationId": "SubmissionController_get",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Submission id or fixture id (prj_01).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Draft or submitted: for its team, the event's organisers and admins (403 otherwise).",
+        "tags": [
+          "submissions"
+        ]
+      },
+      "patch": {
+        "operationId": "SubmissionController_update",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Submission id or fixture id (prj_01).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSubmissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Edit any field. Team members only, until the deadline, also after submitting\n(403 `submissions_closed` after it).",
+        "tags": [
+          "submissions"
+        ]
+      }
+    },
+    "/api/submissions/{ref}/submit": {
+      "post": {
+        "operationId": "SubmissionController_submit",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Submission id or fixture id (prj_01).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Submit the draft (needs a title and a summary); it then appears in the public gallery.",
+        "tags": [
+          "submissions"
+        ]
+      }
+    },
     "/api/judge/scores": {
       "get": {
         "operationId": "JudgingController_ownScores",
@@ -1251,34 +1355,147 @@
           "id": {
             "type": "string"
           },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fixture id (e.g. prj_01) when imported from fixtures.json."
+          },
           "eventId": {
             "type": "string"
           },
           "teamId": {
             "type": "string"
           },
+          "trackId": {
+            "type": "string",
+            "nullable": true
+          },
           "title": {
             "type": "string"
           },
-          "status": {
+          "tagline": {
             "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "repoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "demoVideoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "liveUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "techTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "description": "DRAFT until a member submits it; SUBMITTED entries appear in the public gallery.",
             "enum": [
               "DRAFT",
               "SUBMITTED"
-            ]
+            ],
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "When it was first submitted."
           },
           "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
             "type": "string"
           }
         },
         "required": [
           "id",
+          "externalId",
           "eventId",
           "teamId",
+          "trackId",
           "title",
+          "tagline",
+          "summary",
+          "description",
+          "repoUrl",
+          "demoVideoUrl",
+          "liveUrl",
+          "techTags",
           "status",
-          "createdAt"
+          "submittedAt",
+          "createdAt",
+          "updatedAt"
         ]
+      },
+      "UpdateSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "tagline": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 160
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 20000
+          },
+          "repoUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "demoVideoUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "liveUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "techTags": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          "track": {
+            "type": "string",
+            "nullable": true,
+            "description": "Track id or fixture id (e.g. trk_01) of this event; `null` for no track.",
+            "maxLength": 100
+          }
+        }
       },
       "JudgeRefDto": {
         "type": "object",
@@ -1755,6 +1972,11 @@
             "items": {
               "$ref": "#/components/schemas/TeamMemberDto"
             }
+          },
+          "submissionId": {
+            "type": "string",
+            "nullable": true,
+            "description": "The team's current submission in this event (draft or submitted), if it has one."
           }
         },
         "required": [
@@ -1762,7 +1984,8 @@
           "externalId",
           "eventId",
           "name",
-          "members"
+          "members",
+          "submissionId"
         ]
       },
       "InviteDto": {

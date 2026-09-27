@@ -11,6 +11,7 @@ export const AUDIT_ACTIONS = [
   'demo.seeded',
   'submission.created',
   'submission.updated',
+  'submission.submitted',
   'duplicate.flagged',
   'user.admin_granted',
   'user.password_reset',

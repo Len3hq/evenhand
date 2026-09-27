@@ -143,6 +143,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/submissions/{ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Draft or submitted: for its team, the event's organisers and admins (403 otherwise). */
+        get: operations["SubmissionController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit any field. Team members only, until the deadline, also after submitting
+         *     (403 `submissions_closed` after it).
+         */
+        patch: operations["SubmissionController_update"];
+        trace?: never;
+    };
+    "/api/submissions/{ref}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit the draft (needs a title and a summary); it then appears in the public gallery. */
+        post: operations["SubmissionController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/judge/scores": {
         parameters: {
             query?: never;
@@ -471,12 +509,43 @@ export interface components {
         };
         SubmissionDto: {
             id: string;
+            /** @description Fixture id (e.g. prj_01) when imported from fixtures.json. */
+            externalId: string | null;
             eventId: string;
             teamId: string;
+            trackId: string | null;
             title: string;
-            /** @enum {string} */
+            tagline: string | null;
+            summary: string | null;
+            description: string | null;
+            repoUrl: string | null;
+            demoVideoUrl: string | null;
+            liveUrl: string | null;
+            techTags: string[];
+            /**
+             * @description DRAFT until a member submits it; SUBMITTED entries appear in the public gallery.
+             * @enum {string}
+             */
             status: "DRAFT" | "SUBMITTED";
+            /** @description When it was first submitted. */
+            submittedAt: string | null;
             createdAt: string;
+            updatedAt: string;
+        };
+        UpdateSubmissionDto: {
+            title?: string;
+            tagline?: string | null;
+            summary?: string | null;
+            description?: string | null;
+            /** Format: uri */
+            repoUrl?: string | null;
+            /** Format: uri */
+            demoVideoUrl?: string | null;
+            /** Format: uri */
+            liveUrl?: string | null;
+            techTags?: string[];
+            /** @description Track id or fixture id (e.g. trk_01) of this event; `null` for no track. */
+            track?: string | null;
         };
         JudgeRefDto: {
             /** @description Internal judge id (the judge's EventRole id). */
@@ -609,6 +678,8 @@ export interface components {
             eventId: string;
             name: string;
             members: components["schemas"]["TeamMemberDto"][];
+            /** @description The team's current submission in this event (draft or submitted), if it has one. */
+            submissionId: string | null;
         };
         InviteDto: {
             /** @description The secret. Shown only in this response; the server keeps a hash. */
@@ -799,6 +870,76 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionDto"];
+                };
+            };
+        };
+    };
+    SubmissionController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Submission id or fixture id (prj_01). */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionDto"];
+                };
+            };
+        };
+    };
+    SubmissionController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Submission id or fixture id (prj_01). */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSubmissionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionDto"];
+                };
+            };
+        };
+    };
+    SubmissionController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Submission id or fixture id (prj_01). */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

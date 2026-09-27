@@ -22,6 +22,8 @@ export class TeamDto {
   eventId: string;
   name: string;
   members: TeamMemberDto[];
+  /** The team's current submission in this event (draft or submitted), if it has one. */
+  submissionId: string | null;
 }
 
 export class InviteDto {

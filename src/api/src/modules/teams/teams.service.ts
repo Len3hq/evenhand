@@ -19,6 +19,12 @@ const TEAM_INCLUDE = {
     include: { user: { select: { id: true, name: true, email: true } } },
     orderBy: { joinedAt: 'asc' },
   },
+  // The live submission: not replaced by a newer copy, not held as a suspected duplicate.
+  submissions: {
+    where: { supersededById: null, duplicateHold: false },
+    select: { id: true },
+    take: 1,
+  },
 } satisfies Prisma.TeamInclude;
 
 type TeamRow = Prisma.TeamGetPayload<{ include: typeof TEAM_INCLUDE }>;
@@ -238,5 +244,6 @@ function toDto(t: TeamRow): TeamDto {
       email: m.user.email,
       joinedAt: m.joinedAt.toISOString(),
     })),
+    submissionId: t.submissions[0]?.id ?? null,
   };
 }
