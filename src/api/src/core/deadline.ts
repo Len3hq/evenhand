@@ -6,11 +6,21 @@ import { DomainError } from './errors.js';
 import { PrismaService } from './prisma.service.js';
 import { eventByRef } from './refs.js';
 
+type Window = Pick<Event, 'submissionsClose'> & { opensAt?: Date | null };
+
 /**
  * The deadline rule (BUILD-PLAN decisions 30, 48): a submission write is accepted only while
- * `now < submissions_close`, using the server clock in UTC. Never trust a client's time.
+ * `opens_at <= now < submissions_close`, using the server clock in UTC. Never trust a
+ * client's time. An event without `opens_at` is open from the start.
  */
-export function assertSubmissionsOpen(event: Pick<Event, 'submissionsClose'>, now: Date): void {
+export function assertSubmissionsOpen(event: Window, now: Date): void {
+  if (event.opensAt && now.getTime() < event.opensAt.getTime()) {
+    throw new DomainError(
+      HttpStatus.FORBIDDEN,
+      'submissions_not_open',
+      `Submissions open at ${event.opensAt.toISOString()}.`,
+    );
+  }
   if (now.getTime() >= event.submissionsClose.getTime()) {
     throw new DomainError(
       HttpStatus.FORBIDDEN,
@@ -18,6 +28,12 @@ export function assertSubmissionsOpen(event: Pick<Event, 'submissionsClose'>, no
       `Submissions closed at ${event.submissionsClose.toISOString()}.`,
     );
   }
+}
+
+/** The same rule as a yes/no, for showing the state (never for enforcing it). */
+export function submissionsOpen(event: Window, now: Date): boolean {
+  const t = now.getTime();
+  return (!event.opensAt || event.opensAt.getTime() <= t) && t < event.submissionsClose.getTime();
 }
 
 /**

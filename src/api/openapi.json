@@ -327,6 +327,130 @@
           "judging"
         ]
       }
+    },
+    "/api/events": {
+      "get": {
+        "operationId": "EventsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Every event, newest deadline first. Public.",
+        "tags": [
+          "events"
+        ]
+      },
+      "post": {
+        "operationId": "EventsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create an event; you become its organiser. Admins and existing organisers only (403\notherwise). The slug is derived from the name unless given; a taken slug is 409.",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/events/{eventRef}": {
+      "get": {
+        "operationId": "EventsController_get",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "One event with its tracks and prizes. Public.",
+        "tags": [
+          "events"
+        ]
+      },
+      "patch": {
+        "operationId": "EventsController_update",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Change the name or dates. Organisers of this event and admins only.",
+        "tags": [
+          "events"
+        ]
+      }
     }
   },
   "info": {
@@ -854,6 +978,242 @@
         "required": [
           "items"
         ]
+      },
+      "EventDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fixture id (e.g. evt_01) when imported from fixtures.json."
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "opensAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "submissionsClose": {
+            "type": "string"
+          },
+          "judgingClose": {
+            "type": "string",
+            "nullable": true
+          },
+          "resultsPublishedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "submissionsOpen": {
+            "type": "boolean",
+            "description": "True while the server accepts submissions: opensAt <= now < submissionsClose."
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "slug",
+          "name",
+          "opensAt",
+          "submissionsClose",
+          "judgingClose",
+          "resultsPublishedAt",
+          "submissionsOpen"
+        ]
+      },
+      "EventPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventDto"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ]
+      },
+      "CreateEventDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL name, e.g. `spring-hack-2026`. Derived from the name when omitted.",
+            "maxLength": 60
+          },
+          "opensAt": {
+            "type": "string",
+            "description": "When submissions open. Optional: without it, submissions are open until the close."
+          },
+          "submissionsClose": {
+            "type": "string",
+            "description": "Submissions are accepted only while now < submissionsClose (server clock, UTC)."
+          },
+          "judgingClose": {
+            "type": "string",
+            "description": "When judging ends. Must be after submissionsClose."
+          }
+        },
+        "required": [
+          "name",
+          "submissionsClose"
+        ]
+      },
+      "EventTrackDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "name"
+        ]
+      },
+      "EventPrizeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "trackId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Null for an overall prize."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "trackId"
+        ]
+      },
+      "EventDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fixture id (e.g. evt_01) when imported from fixtures.json."
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "opensAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "submissionsClose": {
+            "type": "string"
+          },
+          "judgingClose": {
+            "type": "string",
+            "nullable": true
+          },
+          "resultsPublishedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "submissionsOpen": {
+            "type": "boolean",
+            "description": "True while the server accepts submissions: opensAt <= now < submissionsClose."
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventTrackDto"
+            }
+          },
+          "prizes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventPrizeDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "slug",
+          "name",
+          "opensAt",
+          "submissionsClose",
+          "judgingClose",
+          "resultsPublishedAt",
+          "submissionsOpen",
+          "tracks",
+          "prizes"
+        ]
+      },
+      "UpdateEventDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "opensAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "submissionsClose": {
+            "type": "string"
+          },
+          "judgingClose": {
+            "type": "string",
+            "nullable": true
+          }
+        }
       }
     }
   }

@@ -197,6 +197,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every event, newest deadline first. Public. */
+        get: operations["EventsController_list"];
+        put?: never;
+        /**
+         * Create an event; you become its organiser. Admins and existing organisers only (403
+         *     otherwise). The slug is derived from the name unless given; a taken slug is 409.
+         */
+        post: operations["EventsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{eventRef}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One event with its tracks and prizes. Public. */
+        get: operations["EventsController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change the name or dates. Organisers of this event and admins only. */
+        patch: operations["EventsController_update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -328,6 +367,69 @@ export interface components {
         };
         ScoreListDto: {
             items: components["schemas"]["ScoreDto"][];
+        };
+        EventDto: {
+            id: string;
+            /** @description Fixture id (e.g. evt_01) when imported from fixtures.json. */
+            externalId: string | null;
+            slug: string;
+            name: string;
+            opensAt: string | null;
+            submissionsClose: string;
+            judgingClose: string | null;
+            resultsPublishedAt: string | null;
+            /** @description True while the server accepts submissions: opensAt <= now < submissionsClose. */
+            submissionsOpen: boolean;
+        };
+        EventPageDto: {
+            items: components["schemas"]["EventDto"][];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        CreateEventDto: {
+            name: string;
+            /** @description URL name, e.g. `spring-hack-2026`. Derived from the name when omitted. */
+            slug?: string;
+            /** @description When submissions open. Optional: without it, submissions are open until the close. */
+            opensAt?: string;
+            /** @description Submissions are accepted only while now < submissionsClose (server clock, UTC). */
+            submissionsClose: string;
+            /** @description When judging ends. Must be after submissionsClose. */
+            judgingClose?: string;
+        };
+        EventTrackDto: {
+            id: string;
+            externalId: string | null;
+            name: string;
+        };
+        EventPrizeDto: {
+            id: string;
+            name: string;
+            description: string | null;
+            /** @description Null for an overall prize. */
+            trackId: string | null;
+        };
+        EventDetailDto: {
+            id: string;
+            /** @description Fixture id (e.g. evt_01) when imported from fixtures.json. */
+            externalId: string | null;
+            slug: string;
+            name: string;
+            opensAt: string | null;
+            submissionsClose: string;
+            judgingClose: string | null;
+            resultsPublishedAt: string | null;
+            /** @description True while the server accepts submissions: opensAt <= now < submissionsClose. */
+            submissionsOpen: boolean;
+            tracks: components["schemas"]["EventTrackDto"][];
+            prizes: components["schemas"]["EventPrizeDto"][];
+        };
+        UpdateEventDto: {
+            name?: string;
+            opensAt?: string | null;
+            submissionsClose?: string;
+            judgingClose?: string | null;
         };
     };
     responses: never;
@@ -568,6 +670,96 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    EventsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventPageDto"];
+                };
+            };
+        };
+    };
+    EventsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEventDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventDto"];
+                };
+            };
+        };
+    };
+    EventsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventDetailDto"];
+                };
+            };
+        };
+    };
+    EventsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEventDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventDto"];
+                };
             };
         };
     };

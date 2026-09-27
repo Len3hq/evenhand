@@ -14,6 +14,8 @@ export const AUDIT_ACTIONS = [
   'duplicate.flagged',
   'user.admin_granted',
   'user.password_reset',
+  'event.created',
+  'event.updated',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

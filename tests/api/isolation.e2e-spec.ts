@@ -43,7 +43,7 @@ const LATE_PROBE = { title: 'dogfood-late-submission-probe', summary: 'probe' };
 
 const matrix: {
   name: string;
-  method: 'get' | 'post';
+  method: 'get' | 'post' | 'patch';
   path: string;
   body?: object;
   expect: Record<Actor, number>;
@@ -123,6 +123,50 @@ const matrix: {
     name: 'scores CSV export (check 7)',
     method: 'get',
     path: '/api/events/evt_01/export/scores.csv',
+    expect: {
+      anon: 401,
+      participant: 403,
+      judge_a: 403,
+      judge_b: 403,
+      organizer: 200,
+      admin: 200,
+      otherOrganizer: 403,
+    },
+  },
+  {
+    name: 'one event, with tracks and prizes (public)',
+    method: 'get',
+    path: '/api/events/evt_01',
+    expect: {
+      anon: 200,
+      participant: 200,
+      judge_a: 200,
+      judge_b: 200,
+      organizer: 200,
+      admin: 200,
+      otherOrganizer: 200,
+    },
+  },
+  {
+    name: 'create an event (admins and organisers)',
+    method: 'post',
+    path: '/api/events',
+    body: { name: 'Matrix probe', submissionsClose: '2030-01-01T00:00:00Z' },
+    expect: {
+      anon: 401,
+      participant: 403,
+      judge_a: 403,
+      judge_b: 403,
+      organizer: 201,
+      admin: 201,
+      otherOrganizer: 201,
+    },
+  },
+  {
+    name: 'edit the fixture event (its organisers and admins; an unchanged name writes nothing)',
+    method: 'patch',
+    path: '/api/events/evt_01',
+    body: { name: 'Sample Hack 2026' },
     expect: {
       anon: 401,
       participant: 403,
