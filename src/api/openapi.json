@@ -504,6 +504,48 @@
         ]
       }
     },
+    "/api/events/{eventRef}/assignments/run": {
+      "post": {
+        "operationId": "AssignmentController_run",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunAssignmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentRunDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Top every judged project up to `target` reviews (default 3): track-matched, never a\nconflict of interest, least-loaded judge first, seeded random tie-breaks. Existing work is\nkept. Reports projects that cannot reach the target. The event's organisers and admins.",
+        "tags": [
+          "judging"
+        ]
+      }
+    },
     "/api/events": {
       "get": {
         "operationId": "EventsController_list",
@@ -2314,6 +2356,120 @@
         },
         "required": [
           "criteria"
+        ]
+      },
+      "RunAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "number",
+            "description": "Reviews wanted per project (default 3).",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "seed": {
+            "type": "number",
+            "description": "Seed for the random tie-breaks, to reproduce a run. A fresh one is drawn when omitted.",
+            "minimum": 0,
+            "maximum": 4294967295
+          }
+        }
+      },
+      "AssignmentJudgeDto": {
+        "type": "object",
+        "properties": {
+          "judgeId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "added": {
+            "type": "number",
+            "description": "Assigned in this run."
+          },
+          "total": {
+            "type": "number",
+            "description": "Assigned in total, across all runs."
+          }
+        },
+        "required": [
+          "judgeId",
+          "name",
+          "added",
+          "total"
+        ]
+      },
+      "AssignmentShortfallDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "have": {
+            "type": "number",
+            "description": "Reviews it has after the run."
+          },
+          "eligibleJudges": {
+            "type": "number",
+            "description": "Judges who could review it at all (covering its track, without a conflict)."
+          }
+        },
+        "required": [
+          "projectId",
+          "title",
+          "have",
+          "eligibleJudges"
+        ]
+      },
+      "AssignmentRunDto": {
+        "type": "object",
+        "properties": {
+          "batch": {
+            "type": "string"
+          },
+          "seed": {
+            "type": "number"
+          },
+          "target": {
+            "type": "number"
+          },
+          "projects": {
+            "type": "number",
+            "description": "Projects in judging: submitted, eligible, not a replaced or held duplicate copy."
+          },
+          "added": {
+            "type": "number"
+          },
+          "judges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignmentJudgeDto"
+            }
+          },
+          "shortfalls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignmentShortfallDto"
+            }
+          },
+          "components": {
+            "type": "number",
+            "description": "Connected groups of judges who share projects. Above 1, some judges' leniency cannot be\ncompared with the others'."
+          }
+        },
+        "required": [
+          "batch",
+          "seed",
+          "target",
+          "projects",
+          "added",
+          "judges",
+          "shortfalls",
+          "components"
         ]
       },
       "EventDto": {

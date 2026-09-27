@@ -37,6 +37,10 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
       return `${who} changed the tracks ${it} judges: ${list(asRecord(entry.before).tracks)} → ${list(after.tracks)}`;
     case 'judge.removed':
       return `${who} removed the judge ${it}`;
+    case 'assignment.run': {
+      const short = Number(after.shortfalls ?? 0);
+      return `${who} ran assignment (${show(after.target)} reviews per project, seed ${show(after.seed)}): ${show(after.added)} new assignment${after.added === 1 ? '' : 's'}${short ? `; ${short} project${short === 1 ? '' : 's'} cannot reach the target` : ''}`;
+    }
     case 'track.created':
       return `${who} added the track ${it}`;
     case 'track.updated':

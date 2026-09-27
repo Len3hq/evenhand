@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { AssignmentPanel } from '@/components/organizer/assignment-panel';
 import { EventForm } from '@/components/organizer/event-form';
 import { JudgesEditor } from '@/components/organizer/judges-editor';
 import { OrganizersEditor } from '@/components/organizer/organizers-editor';
@@ -104,6 +105,16 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
           team in this event, or organising it, can judge it.
         </p>
         <JudgesEditor eventId={event.id} judges={judges} tracks={event.tracks} />
+      </Card>
+
+      <Card>
+        <h2 className="mb-1 text-lg font-semibold">Assignment</h2>
+        <p className="mb-4 text-sm text-muted">
+          Gives each submitted project the chosen number of judges from its track: least-busy judge
+          first, never a conflict of interest, random where it is a tie. Run it after submissions
+          close; run it again after inviting more judges.
+        </p>
+        <AssignmentPanel eventId={event.id} />
       </Card>
 
       <Card>

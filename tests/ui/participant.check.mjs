@@ -143,7 +143,8 @@ await step('Ben accepts a judge invitation for another event', async () => {
 await step('a judge cannot also join a team in that event', async () => {
   await ben.goto(`${BASE}/teams`);
   const options = await ben.locator('#event option').allInnerTexts();
-  if (options.some((o) => o.startsWith('Judged by Ben'))) throw new Error('offered a team there');
+  // This run's event only: earlier runs left events judged by other people named Ben.
+  if (options.includes(`Judged by Ben ${stamp}`)) throw new Error('offered a team there');
 });
 
 await step('a broken invite link says so', async () => {

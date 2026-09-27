@@ -35,9 +35,15 @@ s = Σ_c w_c · x_c  /  Σ_c w_c
 
 **Invitation (implemented).** Organisers create judge invite links from the event's settings page, choosing the tracks the judge covers; a link admits one person by default, or up to 50 for a panel. Accepting makes the person a judge of the event for those tracks. Nobody on a team in the event or organising it can accept. Organisers see each judge's tracks and progress, can change the tracks, and can remove a judge only before they have reviewed anything: a judge with reviews stays on the record.
 
-**Assignment ⏳.**
+**Assignment (implemented).** A pure, seeded function in the judging engine ([`assign.ts`](src/judging-engine/src/assign.ts)), run from the event's settings page (`POST /api/events/:event/assignments/run`):
 
-Greedy least-loaded, track-matched, at least 3 reviews per project, conflict-of-interest block list, deterministic tie-break from a seeded RNG (`createRng` in the engine), batches, and a warning if a batch would split a track's judges into disconnected groups (decisions 17, 21, 51). Fixture reviews are imported as the completed `fixture` batch.
+1. The pool is submitted, eligible projects that are not a held or replaced duplicate copy.
+2. A judge may review a project if they cover its track (a trackless project can go to anyone), have no conflict of interest with its team (declared conflicts plus the judge's own team, always), and are not already assigned to it.
+3. Repeatedly, the project with the fewest reviews goes to the least-loaded judge who may review it, until every project reaches the target (3 by default) or runs out of eligible judges. Ties, and each judge's queue order, come from a seeded generator; the seed is returned and audited, so a run can be reproduced.
+4. A run only tops up: existing assignments are never moved, so it can be run again after late submissions or new judges.
+5. It reports projects that cannot reach the target (with how many judges could review them) and the number of connected judge–project groups, because judges in separate groups cannot be compared when normalising.
+
+On the fixtures: 8 new assignments bring the eight projects that only two judges finished up to 3. All 40 judged projects then have 3–5 reviews (34 × 3, 3 × 4, 3 × 5) and every judge is in one connected group. Unit tests cover coverage, tracks, conflicts, even load, reproducibility and the fixture top-up ([ADR](docs/decisions/20260927-2057-b-assignment.md)).
 
 ## 4. Normalization ⏳ (B)
 

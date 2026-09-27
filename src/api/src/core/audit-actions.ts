@@ -24,6 +24,7 @@ export const AUDIT_ACTIONS = [
   'judge.joined',
   'judge.tracks_updated',
   'judge.removed',
+  'assignment.run',
   'track.created',
   'track.updated',
   'track.deleted',

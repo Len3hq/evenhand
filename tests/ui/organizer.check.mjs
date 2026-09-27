@@ -122,6 +122,15 @@ await step('create a judge invite link for a track', async () => {
   if (!url.startsWith(`${BASE}/judge-invites/`)) throw new Error(url);
 });
 
+await step('run assignment on the fixture event and read what it did', async () => {
+  const back = page.url();
+  await page.goto(`${BASE}/organizer/events/evt_01`);
+  await page.click('button:has-text("Run assignment")');
+  // 41 fixture projects minus the held copy of the Dry Harbour duplicate.
+  await page.getByText(/across 40 projects \(target 3, seed \d+\)/).waitFor();
+  await page.goto(back);
+});
+
 await step('appoint an organiser, then remove them', async () => {
   // priya1 is the demo participant; she competes in the demo event, not in this one.
   await page.fill('#new-organizer', 'priya1@example.org');

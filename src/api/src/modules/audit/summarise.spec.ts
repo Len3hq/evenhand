@@ -87,6 +87,22 @@ describe('audit summaries', () => {
     ).toBe('Ada changed the tracks "ben@x.test" judges: Games → no tracks');
   });
 
+  it('summarises an assignment run, with its seed', () => {
+    expect(
+      summarise(
+        {
+          action: 'assignment.run',
+          before: null,
+          after: { target: 3, seed: 7, added: 12, shortfalls: 2 },
+        },
+        'Ada',
+        'Hack',
+      ),
+    ).toBe(
+      'Ada ran assignment (3 reviews per project, seed 7): 12 new assignments; 2 projects cannot reach the target',
+    );
+  });
+
   it('says "the system" for the seed and command line', () => {
     expect(
       summarise({ action: 'fixtures.imported', before: null, after: {} }, null, 'Sample'),

@@ -257,6 +257,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events/{eventRef}/assignments/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Top every judged project up to `target` reviews (default 3): track-matched, never a
+         *     conflict of interest, least-loaded judge first, seeded random tie-breaks. Existing work is
+         *     kept. Reports projects that cannot reach the target. The event's organisers and admins.
+         */
+        post: operations["AssignmentController_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -853,6 +874,43 @@ export interface components {
         };
         RubricInputDto: {
             criteria: components["schemas"]["CriterionInputDto"][];
+        };
+        RunAssignmentDto: {
+            /** @description Reviews wanted per project (default 3). */
+            target?: number;
+            /** @description Seed for the random tie-breaks, to reproduce a run. A fresh one is drawn when omitted. */
+            seed?: number;
+        };
+        AssignmentJudgeDto: {
+            judgeId: string;
+            name: string;
+            /** @description Assigned in this run. */
+            added: number;
+            /** @description Assigned in total, across all runs. */
+            total: number;
+        };
+        AssignmentShortfallDto: {
+            projectId: string;
+            title: string;
+            /** @description Reviews it has after the run. */
+            have: number;
+            /** @description Judges who could review it at all (covering its track, without a conflict). */
+            eligibleJudges: number;
+        };
+        AssignmentRunDto: {
+            batch: string;
+            seed: number;
+            target: number;
+            /** @description Projects in judging: submitted, eligible, not a replaced or held duplicate copy. */
+            projects: number;
+            added: number;
+            judges: components["schemas"]["AssignmentJudgeDto"][];
+            shortfalls: components["schemas"]["AssignmentShortfallDto"][];
+            /**
+             * @description Connected groups of judges who share projects. Above 1, some judges' leniency cannot be
+             *     compared with the others'.
+             */
+            components: number;
         };
         EventDto: {
             id: string;
@@ -1464,6 +1522,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RubricDto"];
+                };
+            };
+        };
+    };
+    AssignmentController_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunAssignmentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentRunDto"];
                 };
             };
         };
