@@ -15,6 +15,7 @@ import type {
   EventQueryDto,
   UpdateEventDto,
 } from './dto/event.dto.js';
+import { manageableEvent } from './manageable-event.js';
 import { firstFreeSlug, isReservedSlug, slugify } from './slug.js';
 
 /** The fields an organiser can edit, as stored. */
@@ -117,10 +118,7 @@ export class EventsService {
   /** Edits the name or dates. Organisers of this event and admins only. */
   async update(actor: Actor, ref: string, dto: UpdateEventDto): Promise<EventDto> {
     // 1. deny first: someone who organises nothing is refused without a lookup.
-    if (!actor.isAdmin && !actor.hasRoleAnywhere('ORGANIZER')) throw forbidden();
-    const event = await this.prisma.event.findFirst({ where: eventByRef(ref) });
-    if (!event) throw new DomainError(HttpStatus.NOT_FOUND, 'not_found', 'No such event.');
-    if (!actor.canManageEvent(event.id)) throw forbidden();
+    const event = await manageableEvent(this.prisma, actor, ref);
 
     // 2. the merged result must still be a valid event.
     if (dto.submissionsClose === null) {

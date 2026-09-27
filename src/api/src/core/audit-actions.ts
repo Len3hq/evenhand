@@ -16,6 +16,12 @@ export const AUDIT_ACTIONS = [
   'user.password_reset',
   'event.created',
   'event.updated',
+  'track.created',
+  'track.updated',
+  'track.deleted',
+  'prize.created',
+  'prize.updated',
+  'prize.deleted',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

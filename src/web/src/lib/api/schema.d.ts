@@ -236,6 +236,75 @@ export interface paths {
         patch: operations["EventsController_update"];
         trace?: never;
     };
+    "/api/events/{eventRef}/tracks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a track. A name already used in this event is 409 `track_name_taken`. */
+        post: operations["TracksController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{eventRef}/tracks/{trackRef}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove an unused track. One with submissions, prizes or judges is 409 `track_in_use`. */
+        delete: operations["TracksController_remove"];
+        options?: never;
+        head?: never;
+        /** Rename a track. */
+        patch: operations["TracksController_rename"];
+        trace?: never;
+    };
+    "/api/events/{eventRef}/prizes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a prize: overall, or for one track of this event. */
+        post: operations["PrizesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{eventRef}/prizes/{prizeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["PrizesController_remove"];
+        options?: never;
+        head?: never;
+        /** Change a prize's name, description or track. */
+        patch: operations["PrizesController_update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -430,6 +499,25 @@ export interface components {
             opensAt?: string | null;
             submissionsClose?: string;
             judgingClose?: string | null;
+        };
+        CreateTrackDto: {
+            /** @description Unique within the event. */
+            name: string;
+        };
+        UpdateTrackDto: {
+            /** @description Unique within the event. */
+            name: string;
+        };
+        CreatePrizeDto: {
+            name: string;
+            description?: string;
+            /** @description The track this prize is for (id or fixture id, e.g. trk_01). Omit for an overall prize. */
+            track?: string;
+        };
+        UpdatePrizeDto: {
+            name?: string;
+            description?: string | null;
+            track?: string | null;
         };
     };
     responses: never;
@@ -759,6 +847,156 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EventDto"];
+                };
+            };
+        };
+    };
+    TracksController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTrackDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventTrackDto"];
+                };
+            };
+        };
+    };
+    TracksController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+                /** @description Track id or fixture id (trk_01). */
+                trackRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TracksController_rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+                /** @description Track id or fixture id (trk_01). */
+                trackRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTrackDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventTrackDto"];
+                };
+            };
+        };
+    };
+    PrizesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePrizeDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventPrizeDto"];
+                };
+            };
+        };
+    };
+    PrizesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+                prizeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PrizesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+                prizeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePrizeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventPrizeDto"];
                 };
             };
         };

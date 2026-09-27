@@ -24,6 +24,8 @@ export const ERROR_CODES = [
   'team_already_has_submission',
   'email_taken',
   'slug_taken',
+  'track_name_taken',
+  'track_in_use',
   'ambiguous_reference',
   'validation_failed',
   'not_found',

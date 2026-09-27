@@ -43,7 +43,7 @@ const LATE_PROBE = { title: 'dogfood-late-submission-probe', summary: 'probe' };
 
 const matrix: {
   name: string;
-  method: 'get' | 'post' | 'patch';
+  method: 'get' | 'post' | 'patch' | 'delete';
   path: string;
   body?: object;
   expect: Record<Actor, number>;
@@ -174,6 +174,50 @@ const matrix: {
       judge_b: 403,
       organizer: 200,
       admin: 200,
+      otherOrganizer: 403,
+    },
+  },
+  {
+    name: 'add a prize to the fixture event',
+    method: 'post',
+    path: '/api/events/evt_01/prizes',
+    body: { name: 'Matrix prize' },
+    expect: {
+      anon: 401,
+      participant: 403,
+      judge_a: 403,
+      judge_b: 403,
+      organizer: 201,
+      admin: 201,
+      otherOrganizer: 403,
+    },
+  },
+  {
+    name: 'rename a fixture track (to its own name: writes nothing)',
+    method: 'patch',
+    path: '/api/events/evt_01/tracks/trk_01',
+    body: { name: 'Developer tools' },
+    expect: {
+      anon: 401,
+      participant: 403,
+      judge_a: 403,
+      judge_b: 403,
+      organizer: 200,
+      admin: 200,
+      otherOrganizer: 403,
+    },
+  },
+  {
+    name: 'delete a prize that does not exist (403 before any lookup for non-organisers)',
+    method: 'delete',
+    path: '/api/events/evt_01/prizes/00000000-0000-7000-8000-000000000000',
+    expect: {
+      anon: 401,
+      participant: 403,
+      judge_a: 403,
+      judge_b: 403,
+      organizer: 404,
+      admin: 404,
       otherOrganizer: 403,
     },
   },

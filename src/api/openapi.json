@@ -451,6 +451,253 @@
           "events"
         ]
       }
+    },
+    "/api/events/{eventRef}/tracks": {
+      "post": {
+        "operationId": "TracksController_create",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTrackDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventTrackDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Add a track. A name already used in this event is 409 `track_name_taken`.",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/tracks/{trackRef}": {
+      "patch": {
+        "operationId": "TracksController_rename",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "trackRef",
+            "required": true,
+            "in": "path",
+            "description": "Track id or fixture id (trk_01).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTrackDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventTrackDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Rename a track.",
+        "tags": [
+          "events"
+        ]
+      },
+      "delete": {
+        "operationId": "TracksController_remove",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "trackRef",
+            "required": true,
+            "in": "path",
+            "description": "Track id or fixture id (trk_01).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Remove an unused track. One with submissions, prizes or judges is 409 `track_in_use`.",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/prizes": {
+      "post": {
+        "operationId": "PrizesController_create",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePrizeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPrizeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Add a prize: overall, or for one track of this event.",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/prizes/{prizeId}": {
+      "patch": {
+        "operationId": "PrizesController_update",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "prizeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePrizeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPrizeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Change a prize's name, description or track.",
+        "tags": [
+          "events"
+        ]
+      },
+      "delete": {
+        "operationId": "PrizesController_remove",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "prizeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "events"
+        ]
+      }
     }
   },
   "info": {
@@ -1212,6 +1459,76 @@
           "judgingClose": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "CreateTrackDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique within the event.",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateTrackDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique within the event.",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CreatePrizeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "track": {
+            "type": "string",
+            "description": "The track this prize is for (id or fixture id, e.g. trk_01). Omit for an overall prize.",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdatePrizeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          },
+          "track": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 100
           }
         }
       }
