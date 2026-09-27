@@ -471,6 +471,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events/{eventRef}/export.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The whole event in the organisers' fixtures.json shape (readable by any DOGFOOD portal),
+         *     plus an `evenhand` block with what that shape cannot hold. Submitted projects and final
+         *     reviews only. Load it into another Evenhand with `cli import <file>`. The event's
+         *     organisers and admins only.
+         */
+        get: operations["EventExportController_export"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1536,6 +1558,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlatformAuditPageDto"];
+                };
+            };
+        };
+    };
+    EventExportController_export: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
                 };
             };
         };

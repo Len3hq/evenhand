@@ -1108,6 +1108,38 @@
           "audit"
         ]
       }
+    },
+    "/api/events/{eventRef}/export.json": {
+      "get": {
+        "operationId": "EventExportController_export",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The whole event in the organisers' fixtures.json shape (readable by any DOGFOOD portal),\nplus an `evenhand` block with what that shape cannot hold. Submitted projects and final\nreviews only. Load it into another Evenhand with `cli import <file>`. The event's\norganisers and admins only.",
+        "tags": [
+          "export"
+        ]
+      }
     }
   },
   "info": {

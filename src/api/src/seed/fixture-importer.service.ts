@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AuditService } from '../core/audit.service.js';
 import { PrismaService, type Tx } from '../core/prisma.service.js';
+import { firstFreeSlug, isReservedSlug, SLUG_PATTERN, slugify } from '../modules/events/slug.js';
 import { detectDuplicates } from './duplicates.js';
+import type { EventExtension } from './extension.js';
 import { criterionKeys, type FixtureFile } from './fixtures.js';
 
 export interface ImportSummary {
@@ -24,6 +26,9 @@ const FIXTURE_BATCH = 'fixture';
  *   projects → Submission (SUBMITTED, seed_order = file position) + DuplicateFlag
  *   scores → Assignment(batch "fixture") + Review(FINAL) + CriterionScore
  *   criteria = union of score keys, equal weights, range 1–5.
+ *
+ * An Evenhand export's optional `evenhand` block (seed/extension.ts) is applied to the rows
+ * this import creates: event slug and dates, prizes, rubric labels and weights, project extras.
  */
 @Injectable()
 export class FixtureImporter {
@@ -34,18 +39,15 @@ export class FixtureImporter {
     private readonly audit: AuditService,
   ) {}
 
-  async import(fx: FixtureFile, opts: { passwordHash: string | null }): Promise<ImportSummary> {
+  async import(fx: FixtureFile, opts: ImportOptions): Promise<ImportSummary> {
     return this.prisma.$transaction((tx) => this.run(tx, fx, opts), {
       timeout: 120_000,
       maxWait: 10_000,
     });
   }
 
-  private async run(
-    tx: Tx,
-    fx: FixtureFile,
-    opts: { passwordHash: string | null },
-  ): Promise<ImportSummary> {
+  private async run(tx: Tx, fx: FixtureFile, opts: ImportOptions): Promise<ImportSummary> {
+    const ext = opts.extension ?? null;
     const created: Record<string, number> = {};
     const bump = (k: string): void => {
       created[k] = (created[k] ?? 0) + 1;
@@ -53,13 +55,16 @@ export class FixtureImporter {
 
     // Event — the fixture deadline is imported as is; it is in the past on purpose.
     let event = await tx.event.findUnique({ where: { externalId: fx.event.id } });
+    const createdEvent = !event;
     if (!event) {
       event = await tx.event.create({
         data: {
           externalId: fx.event.id,
-          slug: slugify(fx.event.name),
+          slug: await freeSlug(tx, ext?.event?.slug, fx.event.name),
           name: fx.event.name,
+          opensAt: dateOrNull(ext?.event?.opens_at),
           submissionsClose: new Date(fx.event.submissions_close),
+          judgingClose: dateOrNull(ext?.event?.judging_close),
         },
       });
       bump('events');
@@ -79,13 +84,42 @@ export class FixtureImporter {
       trackId.set(t.id, row.id);
     }
 
-    // Rubric: the union of criterion keys in the scores, equal weights (decision 31).
+    // Prizes (an Evenhand export's only): created with the event, never on a later run.
+    if (createdEvent) {
+      for (const p of ext?.prizes ?? []) {
+        await tx.prize.create({
+          data: {
+            eventId,
+            name: p.name,
+            description: p.description,
+            trackId: p.track ? trackId.get(p.track)! : null,
+          },
+        });
+        bump('prizes');
+      }
+    }
+
+    // Rubric: the union of criterion keys in the scores, equal weights (decision 31), unless
+    // an Evenhand export says otherwise (its labels, weights, ranges and order).
+    const given = new Map((ext?.criteria ?? []).map((c) => [c.key, c]));
+    const keys = [...new Set([...given.keys(), ...criterionKeys(fx.scores)])];
     const criterionId = new Map<string, { id: string; min: number; max: number }>();
-    for (const [order, key] of criterionKeys(fx.scores).entries()) {
+    for (const [order, key] of keys.entries()) {
       let row = await tx.criterion.findUnique({ where: { eventId_key: { eventId, key } } });
       if (!row) {
+        const c = given.get(key);
         row = await tx.criterion.create({
-          data: { eventId, key, label: titleCase(key), weight: 1, min: 1, max: 5, order },
+          data: c
+            ? {
+                eventId,
+                key,
+                label: c.label,
+                weight: c.weight,
+                min: c.min,
+                max: c.max,
+                order: c.order,
+              }
+            : { eventId, key, label: titleCase(key), weight: 1, min: 1, max: 5, order },
         });
         bump('criteria');
       }
@@ -188,6 +222,11 @@ export class FixtureImporter {
             title: p.title,
             summary: p.summary || null,
             repoUrl: p.repo_url || null,
+            tagline: ext?.projects?.[p.id]?.tagline ?? null,
+            description: ext?.projects?.[p.id]?.description ?? null,
+            demoVideoUrl: ext?.projects?.[p.id]?.demo_video_url ?? null,
+            liveUrl: ext?.projects?.[p.id]?.live_url ?? null,
+            techTags: ext?.projects?.[p.id]?.tech_tags ?? [],
             status: 'SUBMITTED',
             submittedAt: new Date(p.submitted_at),
             duplicateHold: onHold.has(p.id),
@@ -286,16 +325,24 @@ export class FixtureImporter {
   }
 }
 
-export function slugify(name: string): string {
-  return (
-    name
-      .normalize('NFKD')
-      .replace(/[̀-ͯ]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'event'
-  );
+export interface ImportOptions {
+  /** Given to every account the import creates; null = no password until one is set. */
+  passwordHash: string | null;
+  extension?: EventExtension | null;
 }
+
+/** The export's slug if it is free and valid, else one derived from the name (-2, -3…). */
+async function freeSlug(tx: Tx, wanted: string | undefined, name: string): Promise<string> {
+  const usable = wanted && SLUG_PATTERN.test(wanted) && !isReservedSlug(wanted);
+  const base = usable ? wanted : slugify(name);
+  const taken = await tx.event.findMany({
+    where: { slug: { startsWith: base } },
+    select: { slug: true },
+  });
+  return firstFreeSlug(base, new Set(taken.map((t) => t.slug)));
+}
+
+const dateOrNull = (v: string | null | undefined): Date | null => (v ? new Date(v) : null);
 
 function titleCase(key: string): string {
   return key.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());

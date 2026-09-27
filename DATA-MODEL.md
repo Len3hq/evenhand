@@ -83,13 +83,29 @@ Result on the published file: 1 event, 8 tracks, 3 criteria, 121 users, 30 judge
 
 In demo mode the seed also creates `organizer@evenhand.local`, `admin@evenhand.local`, an open demo event (`evenhand-demo`, closes 7 days after first boot) with a team for the demo participant, and the four fixed checker tokens.
 
+## Import (way in)
+
+`cli import <file.json>` loads **any** file in the fixtures.json shape into a running portal, through the same importer and the same validation as the seed, without demo data:
+
+```sh
+docker compose cp event.json api:/tmp/event.json
+docker compose exec api node dist/cli/cli.js import /tmp/event.json
+```
+
+- The whole file is validated first (every reference, every date, every score is an integer) and every problem is listed; nothing is written if any is found.
+- It is idempotent like the seed: rows are matched by their file ids, so importing the same file twice changes nothing. A different event id creates a separate event; its slug gets `-2`, `-3`… if the name's slug is taken.
+- People are matched by email. Accounts it creates have **no password**; the portal sends no email, so an operator issues one with `cli reset-password <email>` (printed once, audited).
+- An Evenhand export's optional `evenhand` block is applied to the rows the import creates: the slug, opening and judging dates, prizes, rubric labels, weights and ranges, and project taglines, descriptions, links and tags. Other files simply do not have it.
+
 ## Export (ways out)
 
-| Export                                                      | Route                                                   | Status     |
-| ----------------------------------------------------------- | ------------------------------------------------------- | ---------- |
-| Every review, one row per review, one column per criterion  | `GET /api/events/:event/export/scores.csv` (organisers) | ✅         |
-| The event's audit trail with a readable summary per entry   | `GET /api/events/:event/export/audit.csv` (organisers)  | ✅         |
-| Registrations, teams, submissions, assignments, results CSV | `/api/events/:event/export/*.csv`                       | ⏳ planned |
-| Whole event in the fixtures.json shape (round trip)         | `cli export-event`                                      | ⏳ planned |
+| Export                                                      | Route                                                                                      | Status     |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------- |
+| Every review, one row per review, one column per criterion  | `GET /api/events/:event/export/scores.csv` (organisers)                                    | ✅         |
+| The event's audit trail with a readable summary per entry   | `GET /api/events/:event/export/audit.csv` (organisers)                                     | ✅         |
+| Registrations, teams, submissions, assignments, results CSV | `/api/events/:event/export/*.csv`                                                          | ⏳ planned |
+| Whole event in the fixtures.json shape (round trip)         | `GET /api/events/:event/export.json` (organisers), `cli export-event <event> [--out file]` | ✅         |
+
+**The event export** is the organisers' fixtures.json shape, so any DOGFOOD portal can read it, plus an `evenhand` block with what that shape cannot hold (see Import above). Ids are the fixture ids where a row has them, else ours. Only **submitted** projects and **final** reviews are exported: drafts stay private and unfinished reviews are not scores. The shape requires a track on every project, so a project without one is exported in a placeholder track `evenhand-no-track` ("No track"). Every list is sorted by id (projects by their original order), so export → import into a fresh portal → export gives a byte-identical file; `tests/api/transfer.e2e-spec.ts` checks exactly that, and that exporting `evt_01` reproduces the published fixtures.json record for record.
 
 CSV rules: UTF-8 without a BOM, a multi-column header, RFC 4180 quoting, `\n` line endings, stable row order (judge, then project in fixture order). Text that a spreadsheet would run as a formula (starting with `=`, `+`, `-`, `@`, tab or carriage return) gets a leading `'`; numbers are left alone. Fixture ids are used when present, so a CSV can be joined back to `fixtures.json`.

@@ -5,6 +5,10 @@
  *   node dist/cli/cli.js openapi <out.json>          write the OpenAPI document (no database needed)
  *   node dist/cli/cli.js create-admin <email> [--name <name>] [--reset-password]
  *                                                    make a platform admin; prints a new password once
+ *   node dist/cli/cli.js reset-password <email>     new password for an account, printed once
+ *   node dist/cli/cli.js export-event <event> [--out <file.json>]
+ *                                                    an event in the fixtures.json shape (stdout by default)
+ *   node dist/cli/cli.js import <file.json>         load an event file (fixtures.json shape), no demo data
  *
  * In development: `npm run cli -- <command>` from the repo root.
  * In Docker:      `docker compose exec api node dist/cli/cli.js <command>`.
@@ -20,9 +24,13 @@ import { AuditService } from '../core/audit.service.js';
 import { AppConfig } from '../core/config.js';
 import { CoreModule } from '../core/core.module.js';
 import { PrismaService } from '../core/prisma.service.js';
+import { eventByRef } from '../core/refs.js';
+import { EventExportService } from '../modules/transfer/event-export.service.js';
+import { TransferModule } from '../modules/transfer/transfer.module.js';
 import { SeedModule } from '../seed/seed.module.js';
 import { formatLogins, SeedService } from '../seed/seed.service.js';
 import { createAdmin } from './create-admin.js';
+import { resetPassword } from './reset-password.js';
 
 /** dist/cli/cli.js → repo root data/fixtures.json (same layout in the Docker image). */
 const DEFAULT_FIXTURES = fileURLToPath(new URL('../../../../data/fixtures.json', import.meta.url));
@@ -30,7 +38,10 @@ const DEFAULT_FIXTURES = fileURLToPath(new URL('../../../../data/fixtures.json',
 const USAGE = `usage:
   cli seed [--fixtures <path>]
   cli openapi <out.json>
-  cli create-admin <email> [--name <name>] [--reset-password]`;
+  cli create-admin <email> [--name <name>] [--reset-password]
+  cli reset-password <email>
+  cli export-event <event> [--out <file.json>]
+  cli import <file.json>`;
 
 async function seed(args: string[]): Promise<void> {
   const flag = args.indexOf('--fixtures');
@@ -89,6 +100,64 @@ async function createAdminCommand(args: string[]): Promise<void> {
   }
 }
 
+async function resetPasswordCommand(args: string[]): Promise<void> {
+  const email = args[0];
+  if (!email) throw new Error('reset-password needs an email address');
+  const ctx = await NestFactory.createApplicationContext(CoreModule, { logger: ['error'] });
+  try {
+    const password = await resetPassword(ctx.get(PrismaService), ctx.get(AuditService), email);
+    process.stdout.write(
+      `new password for ${email.trim().toLowerCase()} (shown once): ${password}\n`,
+    );
+  } finally {
+    await ctx.close();
+  }
+}
+
+async function exportEvent(args: string[]): Promise<void> {
+  const ref = args[0];
+  if (!ref || ref.startsWith('--'))
+    throw new Error('export-event needs an event id, fixture id or slug');
+  const outFlag = args.indexOf('--out');
+  const out = outFlag >= 0 ? args[outFlag + 1] : undefined;
+  if (outFlag >= 0 && !out) throw new Error('--out needs a file path');
+
+  const ctx = await NestFactory.createApplicationContext(TransferModule, { logger: ['error'] });
+  try {
+    const event = await ctx.get(PrismaService).event.findFirst({ where: eventByRef(ref) });
+    if (!event) throw new Error(`no event ${ref}`);
+    const json = `${JSON.stringify(await ctx.get(EventExportService).export(event), null, 2)}\n`;
+    if (out) {
+      await writeFile(out, json);
+      process.stderr.write(`wrote ${out}\n`);
+    } else {
+      process.stdout.write(json);
+    }
+  } finally {
+    await ctx.close();
+  }
+}
+
+async function importFile(args: string[]): Promise<void> {
+  const path = args[0];
+  if (!path) throw new Error('import needs a file path');
+  // Warnings and errors only: stdout carries just the result line.
+  const ctx = await NestFactory.createApplicationContext(SeedModule, { logger: ['warn', 'error'] });
+  try {
+    const { created, duplicatesFlagged } = await ctx.get(SeedService).importFile(path);
+    const rows = Object.entries(created)
+      .map(([k, n]) => `${k}=${n}`)
+      .join(' ');
+    process.stdout.write(
+      rows
+        ? `created ${rows}; duplicate flags=${duplicatesFlagged}\n`
+        : 'nothing new: every row in the file already exists\n',
+    );
+  } finally {
+    await ctx.close();
+  }
+}
+
 const [command, ...args] = process.argv.slice(2);
 try {
   switch (command) {
@@ -100,6 +169,15 @@ try {
       break;
     case 'create-admin':
       await createAdminCommand(args);
+      break;
+    case 'reset-password':
+      await resetPasswordCommand(args);
+      break;
+    case 'export-event':
+      await exportEvent(args);
+      break;
+    case 'import':
+      await importFile(args);
       break;
     default:
       process.stderr.write(`${USAGE}\n`);

@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AppConfig } from '../core/config.js';
 import { hashPassword } from '../core/passwords.js';
 import { DemoSeeder, type DemoLogin } from './demo-seeder.service.js';
+import { parseExtension } from './extension.js';
 import { FixtureImporter, type ImportSummary } from './fixture-importer.service.js';
 import { parseFixtures } from './fixtures.js';
 
@@ -40,6 +41,25 @@ export class SeedService {
 
     const logins = passwordHash ? await this.demo.seed(fx, summary.eventId, passwordHash) : null;
     return { summary, logins };
+  }
+
+  /**
+   * Loads one event file: the organisers' fixtures.json shape, optionally with an Evenhand
+   * export's `evenhand` block. Validated in full before anything is written; nothing is
+   * written if it is invalid. No demo data, and the accounts it creates have no password
+   * (`cli reset-password <email>` issues one). Safe to repeat: existing rows are kept.
+   */
+  async importFile(path: string): Promise<ImportSummary> {
+    const raw = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>;
+    const fx = parseFixtures(raw);
+    const extension = parseExtension(
+      raw.evenhand,
+      new Set(fx.tracks.map((t) => t.id)),
+      new Set(fx.projects.map((p) => p.id)),
+    );
+    const summary = await this.importer.import(fx, { passwordHash: null, extension });
+    this.logger.log(`imported ${path} into event ${summary.eventId}`);
+    return summary;
   }
 }
 

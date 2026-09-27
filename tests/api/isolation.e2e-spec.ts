@@ -478,6 +478,20 @@ const matrix: {
     },
   },
   {
+    name: 'export the whole fixture event as JSON (its organisers and admins)',
+    method: 'get',
+    path: '/api/events/evt_01/export.json',
+    expect: {
+      anon: 401,
+      participant: 403,
+      judge_a: 403,
+      judge_b: 403,
+      organizer: 200,
+      admin: 200,
+      otherOrganizer: 403,
+    },
+  },
+  {
     name: 'who am I',
     method: 'get',
     path: '/api/auth/me',
