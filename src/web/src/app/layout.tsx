@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { UserNav } from '@/components/nav/user-nav';
+import { currentUser } from '@/lib/session';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -7,7 +9,8 @@ export const metadata: Metadata = {
   description: 'Self-hostable hackathon submissions and judging, with rankings you can check.',
 };
 
-export default function RootLayout({ children }: LayoutProps<'/'>) {
+export default async function RootLayout({ children }: LayoutProps<'/'>) {
+  const me = await currentUser();
   return (
     <html lang="en" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
@@ -22,16 +25,11 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
             <Link href="/projects" className="text-sm text-muted hover:text-fg">
               Gallery
             </Link>
-            <Link href="/organizer" className="text-sm text-muted hover:text-fg">
-              Organise
-            </Link>
             {/* A plain link: /api/docs is served by the API, not a Next.js page. */}
             <a href="/api/docs" className="text-sm text-muted hover:text-fg">
               API
             </a>
-            <Link href="/login" className="ml-auto text-sm text-muted hover:text-fg">
-              Log in
-            </Link>
+            <UserNav me={me} />
           </nav>
         </header>
         <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">

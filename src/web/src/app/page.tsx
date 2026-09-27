@@ -1,6 +1,8 @@
 import Link from 'next/link';
+import { currentUser } from '@/lib/session';
 
-export default function Home() {
+export default async function Home() {
+  const me = await currentUser();
   return (
     <section className="max-w-2xl">
       <h1 className="text-3xl font-semibold tracking-tight">Judging you can check.</h1>
@@ -16,12 +18,14 @@ export default function Home() {
         >
           Browse the gallery
         </Link>
-        <Link
-          href="/login"
-          className="rounded-md border border-border px-4 py-2 text-sm font-medium"
-        >
-          Log in
-        </Link>
+        {me ? null : (
+          <Link
+            href="/register"
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium"
+          >
+            Create an account
+          </Link>
+        )}
       </div>
     </section>
   );

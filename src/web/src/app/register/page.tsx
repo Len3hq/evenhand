@@ -7,7 +7,8 @@ import { Button, ErrorState, Input, Label } from '@/components/ui';
 import { apiPost } from '@/lib/api/client';
 import { returnPath } from '@/lib/return-path';
 
-export default function LoginPage() {
+/** Creates an account and logs it in. Joining a team or judging comes later, by invite link. */
+export default function RegisterPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -18,29 +19,33 @@ export default function LoginPage() {
     setPending(true);
     setError(null);
     try {
-      await apiPost('/api/auth/login', {
+      await apiPost('/api/auth/register', {
+        name: form.get('name'),
         email: form.get('email'),
         password: form.get('password'),
       });
-      router.push(returnPath() ?? '/projects');
+      router.push(returnPath() ?? '/');
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed.');
+      setError(err instanceof Error ? err.message : 'Could not create the account.');
       setPending(false);
     }
   }
 
   return (
     <section className="mx-auto max-w-sm">
-      <h1 className="text-2xl font-semibold">Log in</h1>
+      <h1 className="text-2xl font-semibold">Create an account</h1>
       <p className="mt-1 text-sm text-muted">
-        Demo accounts are printed by <code>docker compose up</code> (password{' '}
-        <code>evenhand-demo</code>).
+        Then create a team, or join one with the invite link a teammate sends you.
       </p>
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <div>
+          <Label htmlFor="name">Name</Label>
+          <Input id="name" name="name" autoComplete="name" required maxLength={120} />
+        </div>
+        <div>
           <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" autoComplete="username" required />
+          <Input id="email" name="email" type="email" autoComplete="email" required />
         </div>
         <div>
           <Label htmlFor="password">Password</Label>
@@ -48,27 +53,32 @@ export default function LoginPage() {
             id="password"
             name="password"
             type="password"
-            autoComplete="current-password"
+            autoComplete="new-password"
             required
+            minLength={10}
+            maxLength={200}
+            aria-describedby="password-help"
           />
+          <p id="password-help" className="mt-1 text-xs text-muted">
+            At least 10 characters.
+          </p>
         </div>
-        {error ? <ErrorState title="Could not log in" message={error} /> : null}
+        {error ? <ErrorState title="Could not create the account" message={error} /> : null}
         <Button type="submit" disabled={pending} className="w-full">
-          {pending ? 'Logging in…' : 'Log in'}
+          {pending ? 'Creating…' : 'Create account'}
         </Button>
       </form>
       <p className="mt-4 text-sm text-muted">
-        New here?{' '}
+        Already have one?{' '}
         <Link
-          href="/register"
+          href="/login"
           className="underline"
-          // Keep ?next= so registering also returns to the page that sent you here.
           onClick={(e) => {
             e.preventDefault();
-            router.push(`/register${window.location.search}`);
+            router.push(`/login${window.location.search}`);
           }}
         >
-          Create an account
+          Log in
         </Link>
       </p>
     </section>

@@ -1,26 +1,10 @@
 // Clicks through the organiser pages in a real browser against the running stack.
 // Run with `npm run test:ui` (tests/ui/run.sh). Creates one event named "Browser Check <time>".
-/* global console, process, document -- Node script; `document` is used inside page callbacks */
-import { chromium } from 'playwright';
+/* global document -- used inside page callbacks, which run in the browser */
+import { BASE, finish, openBrowser, step } from './harness.mjs';
 
-const BASE = 'http://localhost:8080';
-const results = [];
-const step = async (name, fn) => {
-  try {
-    await fn();
-    results.push(`PASS ${name}`);
-  } catch (e) {
-    results.push(`FAIL ${name}: ${e.message.split('\n')[0]}`);
-  }
-};
-
-const browser = await chromium.launch({
-  // The browser talks to "localhost:8080" (so Origin checks see the real portal address),
-  // which this container reaches on the Docker host.
-  args: ['--host-resolver-rules=MAP localhost host.docker.internal'],
-});
-const page = await browser.newPage();
-page.on('dialog', (d) => d.accept());
+const { browser, newPage } = await openBrowser();
+const page = await newPage();
 const name = `Browser Check ${Date.now()}`;
 const slug = name.toLowerCase().replace(/ /g, '-');
 
@@ -122,5 +106,4 @@ await step('filter the trail to tracks only', async () => {
 });
 
 await browser.close();
-console.log(results.join('\n'));
-process.exit(results.some((r) => r.startsWith('FAIL')) ? 1 : 0);
+finish('Organiser pages');

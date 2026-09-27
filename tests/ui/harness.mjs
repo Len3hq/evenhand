@@ -1,0 +1,46 @@
+/* global console, process -- Node script */
+// Shared by the browser checks: one Chromium, named steps, a PASS/FAIL line per step.
+import { chromium } from 'playwright';
+
+export const BASE = 'http://localhost:8080';
+
+/** A fresh browser page (its own cookies). Confirm dialogs are accepted. */
+export async function openBrowser() {
+  const browser = await chromium.launch({
+    // The browser uses "localhost:8080" (so the API's Origin check sees the real portal
+    // address) and this container reaches it on the Docker host.
+    args: ['--host-resolver-rules=MAP localhost host.docker.internal'],
+  });
+  const newPage = async () => {
+    const page = await (await browser.newContext()).newPage();
+    page.on('dialog', (d) => d.accept());
+    return page;
+  };
+  return { browser, newPage };
+}
+
+const results = [];
+
+export async function step(name, fn) {
+  try {
+    await fn();
+    results.push(`PASS ${name}`);
+  } catch (e) {
+    results.push(`FAIL ${name}: ${String(e.message).split('\n')[0]}`);
+  }
+}
+
+/** Prints the results and exits non-zero if any step failed. */
+export function finish(title) {
+  console.log(`${title}\n${results.map((r) => `  ${r}`).join('\n')}`);
+  if (results.some((r) => r.startsWith('FAIL'))) process.exitCode = 1;
+  results.length = 0;
+}
+
+export async function logIn(page, email, password = 'evenhand-demo') {
+  await page.goto(`${BASE}/login`);
+  await page.fill('#email', email);
+  await page.fill('#password', password);
+  await page.click('button[type=submit]');
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'));
+}
