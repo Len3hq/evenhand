@@ -30,5 +30,11 @@ await step('search within the filters, then clear them', async () => {
   await page.getByText('Glass Signal').first().waitFor();
 });
 
+await step('a project page says how it is judged', async () => {
+  await page.click('text=Glass Signal >> nth=0');
+  await page.getByText('Judged on').waitFor();
+  await page.getByText('Functionality: 33% of the score, marked 1–5').waitFor();
+});
+
 await browser.close();
 finish('Gallery');

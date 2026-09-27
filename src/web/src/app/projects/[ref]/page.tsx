@@ -21,6 +21,11 @@ export default async function ProjectPage({ params }: PageProps<'/projects/[ref]
     );
   }
 
+  // The rubric is public: show how this project is judged (nothing if it cannot be loaded).
+  const rubric = await apiGet<Schemas['RubricDto']>(
+    `/api/events/${project.eventId}/criteria`,
+  ).catch(() => null);
+
   const links = [
     ['Repository', project.repoUrl],
     ['Demo video', project.demoVideoUrl],
@@ -57,6 +62,18 @@ export default async function ProjectPage({ params }: PageProps<'/projects/[ref]
             </li>
           ))}
       </ul>
+      {rubric && rubric.criteria.length ? (
+        <section className="mt-8 border-t border-border pt-4">
+          <h2 className="text-sm font-semibold">Judged on</h2>
+          <ul className="mt-2 space-y-1 text-sm text-muted">
+            {rubric.criteria.map((c) => (
+              <li key={c.key}>
+                {c.label}: {Math.round(c.share * 100)}% of the score, marked {c.min}–{c.max}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </article>
   );
 }

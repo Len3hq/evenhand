@@ -5,6 +5,7 @@ import { EventForm } from '@/components/organizer/event-form';
 import { OrganizersEditor } from '@/components/organizer/organizers-editor';
 import { formatUtc } from '@/lib/dates';
 import { PrizesEditor } from '@/components/organizer/prizes-editor';
+import { RubricEditor } from '@/components/organizer/rubric-editor';
 import { TracksEditor } from '@/components/organizer/tracks-editor';
 import { Badge, Card, ErrorState } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
@@ -36,7 +37,10 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
     );
   }
 
-  const organizers = await apiGet<Schemas['OrganizerDto'][]>(`/api/events/${event.id}/organizers`);
+  const [organizers, rubric] = await Promise.all([
+    apiGet<Schemas['OrganizerDto'][]>(`/api/events/${event.id}/organizers`),
+    apiGet<Schemas['RubricDto']>(`/api/events/${event.id}/criteria`),
+  ]);
 
   const downloads = [
     {
@@ -80,6 +84,15 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
       <Card>
         <h2 className="mb-4 text-lg font-semibold">Prizes</h2>
         <PrizesEditor eventId={event.id} prizes={event.prizes} tracks={event.tracks} />
+      </Card>
+
+      <Card>
+        <h2 className="mb-1 text-lg font-semibold">Judging rubric</h2>
+        <p className="mb-4 text-sm text-muted">
+          A project&apos;s score is each criterion&apos;s mark times its share, added up. Teams can
+          see this rubric.
+        </p>
+        <RubricEditor eventId={event.id} rubric={rubric} />
       </Card>
 
       <Card>

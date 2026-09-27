@@ -235,6 +235,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events/{eventRef}/criteria": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The rubric with each criterion's share of the score. Public: teams see how they are judged. */
+        get: operations["RubricController_get"];
+        /**
+         * Replace the rubric (1–10 criteria, in display order). The event's organisers and admins.
+         *     Once reviews are final: labels and weights can change; adding or removing criteria and
+         *     changing a scored range are refused (409 `rubric_locked`).
+         */
+        put: operations["RubricController_replace"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -709,6 +731,36 @@ export interface components {
         };
         ScoreListDto: {
             items: components["schemas"]["ScoreDto"][];
+        };
+        CriterionDto: {
+            key: string;
+            label: string;
+            weight: number;
+            min: number;
+            max: number;
+            order: number;
+            /** @description weight / sum of weights, e.g. 0.5 for half of the score. */
+            share: number;
+        };
+        RubricDto: {
+            criteria: components["schemas"]["CriterionDto"][];
+            /**
+             * @description True once any review is final: criteria can then no longer be added or removed and ranges
+             *     cannot change (existing scores would stop fitting). Labels and weights stay editable.
+             */
+            locked: boolean;
+        };
+        CriterionInputDto: {
+            /** @description Stable machine name, e.g. `functionality`. Derived from the label when omitted. */
+            key?: string;
+            label: string;
+            /** @description Relative weight: shares are weight / sum of weights. */
+            weight: number;
+            min: number;
+            max: number;
+        };
+        RubricInputDto: {
+            criteria: components["schemas"]["CriterionInputDto"][];
         };
         EventDto: {
             id: string;
@@ -1222,6 +1274,54 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    RubricController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RubricDto"];
+                };
+            };
+        };
+    };
+    RubricController_replace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RubricInputDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RubricDto"];
+                };
             };
         };
     };

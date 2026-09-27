@@ -80,6 +80,37 @@ await step('remove the track', async () => {
   await page.getByText('No tracks yet').waitFor();
 });
 
+await step('set a weighted rubric; shares follow the weights', async () => {
+  await page.click('button:has-text("Add criterion")');
+  await page.click('button:has-text("Add criterion")');
+  await page.fill('#criterion-0-label', 'Impact');
+  await page.fill('#criterion-0-weight', '2');
+  await page.fill('#criterion-1-label', 'Polish');
+  const text = await page.locator('table').innerText();
+  if (!text.includes('67%') || !text.includes('33%')) throw new Error(`shares: ${text}`);
+  const saved = page.waitForResponse(
+    (r) => r.url().endsWith('/criteria') && r.request().method() === 'PUT' && r.ok(),
+  );
+  await page.click('button:has-text("Save rubric")');
+  await saved;
+  // Saved for real: it is still there after a reload.
+  await page.reload();
+  if ((await page.locator('#criterion-0-label').inputValue()) !== 'Impact') {
+    throw new Error('the rubric did not persist');
+  }
+});
+
+await step('a locked rubric (judging started) only offers weights and names', async () => {
+  const back = page.url();
+  await page.goto(`${BASE}/organizer/events/evt_01`);
+  await page.getByText('Judging has started').waitFor();
+  if (await page.locator('button:has-text("Add criterion")').count()) {
+    throw new Error('"Add criterion" offered on a locked rubric');
+  }
+  if (!(await page.locator('#criterion-0-min').isDisabled())) throw new Error('range editable');
+  await page.goto(back);
+});
+
 await step('appoint an organiser, then remove them', async () => {
   // priya1 is the demo participant; she competes in the demo event, not in this one.
   await page.fill('#new-organizer', 'priya1@example.org');
@@ -111,6 +142,7 @@ await step('the audit trail tells the story in sentences', async () => {
     'Demo Organizer added the prize "Best climate tool"',
     'Demo Organizer removed the prize "Best climate tool"',
     'Demo Organizer removed the track "Climate and energy"',
+    'Demo Organizer changed the rubric: added "Impact" (weight 2, 1–5); added "Polish" (weight 1, 1–5)',
     'Demo Organizer made "priya1@example.org" an organiser',
     'Demo Organizer removed "priya1@example.org" as an organiser',
   ]) {

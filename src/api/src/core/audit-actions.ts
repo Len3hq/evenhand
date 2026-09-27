@@ -19,6 +19,7 @@ export const AUDIT_ACTIONS = [
   'event.updated',
   'organizer.added',
   'organizer.removed',
+  'rubric.updated',
   'track.created',
   'track.updated',
   'track.deleted',

@@ -27,6 +27,8 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
       return `${who} made ${it} an organiser`;
     case 'organizer.removed':
       return `${who} removed ${it} as an organiser`;
+    case 'rubric.updated':
+      return `${who} changed the rubric: ${rubricChanges(entry.before, entry.after)}`;
     case 'track.created':
       return `${who} added the track ${it}`;
     case 'track.updated':
@@ -72,6 +74,33 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
     default:
       return `${who}: ${entry.action}`;
   }
+}
+
+/** The rubric is stored keyed by criterion: say what was added, removed and re-weighted. */
+function rubricChanges(before: unknown, after: unknown): string {
+  const b = asRecord(before);
+  const a = asRecord(after);
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(a)) {
+    const n = asRecord(value);
+    const o = b[key] ? asRecord(b[key]) : null;
+    if (!o) {
+      parts.push(
+        `added ${show(n.label)} (weight ${show(n.weight)}, ${show(n.min)}–${show(n.max)})`,
+      );
+      continue;
+    }
+    const changed = ['label', 'weight', 'min', 'max'].filter((f) => o[f] !== n[f]);
+    if (changed.length) {
+      parts.push(
+        `${show(o.label)} ${changed.map((f) => `${f} ${show(o[f])} → ${show(n[f])}`).join(', ')}`,
+      );
+    }
+  }
+  for (const [key, value] of Object.entries(b)) {
+    if (!(key in a)) parts.push(`removed ${show(asRecord(value).label)}`);
+  }
+  return parts.length ? parts.join('; ') : 'reordered the criteria';
 }
 
 /** `field: before → after; …` for the keys present in `after`. */

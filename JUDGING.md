@@ -16,7 +16,7 @@ Enforced in API services, deny first: a judge asking for another judge's scores 
 
 Track isolation (a judge sees only projects in their `judge_tracks`) is modelled in the schema and arrives with the judge queue ⏳.
 
-## 2. Weighted rubric (implemented in the engine)
+## 2. Weighted rubric (implemented)
 
 Each review holds raw values per criterion. Its weighted score, on the criterion scale:
 
@@ -24,7 +24,9 @@ Each review holds raw values per criterion. Its weighted score, on the criterion
 s = Σ_c w_c · x_c  /  Σ_c w_c
 ```
 
-- Weights are relative (normalised by their sum). The fixtures carry no weights, so the default is **equal** for functionality, innovation and quality; organisers can change them (rubric editor ⏳).
+- Weights are relative (normalised by their sum). The fixtures carry no weights, so the default is **equal** for functionality, innovation and quality.
+- Organisers set criteria, weights and whole-number ranges on the event's settings page (`PUT /api/events/:event/criteria`). The rubric is public (`GET`), and each project page shows what it is judged on and each criterion's share.
+- Once any review is final, labels and weights can still change, but adding or removing criteria and changing a scored range are refused, because finished reviews would no longer fit ([ADR](docs/decisions/20260927-1929-b-rubric-editing-rules.md)).
 - Raw values are stored and the weighted score is computed when read, so re-weighting applies to past reviews too, and the change is audited.
 - A missing or out-of-range value is an **error, not a zero** (`RubricError`): silently scoring it as 0 would move a rank. The database also rejects out-of-range values.
 - Code: [`src/judging-engine/src/weighted.ts`](src/judging-engine/src/weighted.ts), with tests.

@@ -39,11 +39,20 @@ beforeAll(async () => {
 
 afterAll(() => t.close());
 
+/** The rubric fixtures.json implies: its three score keys, equal weights, 1–5. */
+const FIXTURE_RUBRIC = ['functionality', 'quality', 'innovation'].map((key) => ({
+  key,
+  label: key[0]!.toUpperCase() + key.slice(1),
+  weight: 1,
+  min: 1,
+  max: 5,
+}));
+
 const LATE_PROBE = { title: 'dogfood-late-submission-probe', summary: 'probe' };
 
 const matrix: {
   name: string;
-  method: 'get' | 'post' | 'patch' | 'delete';
+  method: 'get' | 'post' | 'patch' | 'put' | 'delete';
   path: string;
   body?: object;
   expect: Record<Actor, number>;
@@ -545,6 +554,35 @@ const matrix: {
       judge_b: 403,
       organizer: 404,
       admin: 404,
+      otherOrganizer: 403,
+    },
+  },
+  {
+    name: 'the fixture rubric (public, so teams know how they are judged)',
+    method: 'get',
+    path: '/api/events/evt_01/criteria',
+    expect: {
+      anon: 200,
+      participant: 200,
+      judge_a: 200,
+      judge_b: 200,
+      organizer: 200,
+      admin: 200,
+      otherOrganizer: 200,
+    },
+  },
+  {
+    name: 'replace the fixture rubric with itself (organisers and admins; writes nothing)',
+    method: 'put',
+    path: '/api/events/evt_01/criteria',
+    body: { criteria: FIXTURE_RUBRIC },
+    expect: {
+      anon: 401,
+      participant: 403,
+      judge_a: 403,
+      judge_b: 403,
+      organizer: 200,
+      admin: 200,
       otherOrganizer: 403,
     },
   },

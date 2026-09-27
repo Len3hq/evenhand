@@ -56,6 +56,20 @@ describe('audit summaries', () => {
     ).toBe('Ada made "ben@x.test" an organiser');
   });
 
+  it('says what changed in the rubric', () => {
+    const before = {
+      impact: { label: 'Impact', weight: 1, min: 1, max: 5 },
+      polish: { label: 'Polish', weight: 1, min: 1, max: 5 },
+    };
+    const after = {
+      impact: { label: 'Impact', weight: 2, min: 1, max: 5 },
+      novelty: { label: 'Novelty', weight: 1, min: 0, max: 10 },
+    };
+    expect(summarise({ action: 'rubric.updated', before, after }, 'Ada', 'Hack')).toBe(
+      'Ada changed the rubric: "Impact" weight 1 → 2; added "Novelty" (weight 1, 0–10); removed "Polish"',
+    );
+  });
+
   it('says "the system" for the seed and command line', () => {
     expect(
       summarise({ action: 'fixtures.imported', before: null, after: {} }, null, 'Sample'),

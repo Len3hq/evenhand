@@ -6,7 +6,7 @@ import type { ApiErrorBody } from './types';
  * what the API's CSRF check expects.
  */
 async function apiSend<T>(
-  method: 'POST' | 'PATCH' | 'DELETE',
+  method: 'POST' | 'PATCH' | 'PUT' | 'DELETE',
   path: `/api/${string}`,
   body?: unknown,
 ): Promise<T> {
@@ -27,5 +27,8 @@ export const apiPost = <T>(path: `/api/${string}`, body?: unknown): Promise<T> =
 
 export const apiPatch = <T>(path: `/api/${string}`, body: unknown): Promise<T> =>
   apiSend<T>('PATCH', path, body);
+
+export const apiPut = <T>(path: `/api/${string}`, body: unknown): Promise<T> =>
+  apiSend<T>('PUT', path, body);
 
 export const apiDelete = (path: `/api/${string}`): Promise<void> => apiSend<void>('DELETE', path);

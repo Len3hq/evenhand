@@ -432,6 +432,78 @@
         ]
       }
     },
+    "/api/events/{eventRef}/criteria": {
+      "get": {
+        "operationId": "RubricController_get",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RubricDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The rubric with each criterion's share of the score. Public: teams see how they are judged.",
+        "tags": [
+          "judging"
+        ]
+      },
+      "put": {
+        "operationId": "RubricController_replace",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RubricInputDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RubricDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Replace the rubric (1–10 criteria, in display order). The event's organisers and admins.\nOnce reviews are final: labels and weights can change; adding or removing criteria and\nchanging a scored range are refused (409 `rubric_locked`).",
+        "tags": [
+          "judging"
+        ]
+      }
+    },
     "/api/events": {
       "get": {
         "operationId": "EventsController_list",
@@ -1911,6 +1983,115 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "CriterionDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "order": {
+            "type": "number"
+          },
+          "share": {
+            "type": "number",
+            "description": "weight / sum of weights, e.g. 0.5 for half of the score."
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "weight",
+          "min",
+          "max",
+          "order",
+          "share"
+        ]
+      },
+      "RubricDto": {
+        "type": "object",
+        "properties": {
+          "criteria": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CriterionDto"
+            }
+          },
+          "locked": {
+            "type": "boolean",
+            "description": "True once any review is final: criteria can then no longer be added or removed and ranges\ncannot change (existing scores would stop fitting). Labels and weights stay editable."
+          }
+        },
+        "required": [
+          "criteria",
+          "locked"
+        ]
+      },
+      "CriterionInputDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Stable machine name, e.g. `functionality`. Derived from the label when omitted.",
+            "maxLength": 40,
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "weight": {
+            "type": "number",
+            "description": "Relative weight: shares are weight / sum of weights.",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "min": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "max": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "label",
+          "weight",
+          "min",
+          "max"
+        ]
+      },
+      "RubricInputDto": {
+        "type": "object",
+        "properties": {
+          "criteria": {
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CriterionInputDto"
+            }
+          }
+        },
+        "required": [
+          "criteria"
         ]
       },
       "EventDto": {
