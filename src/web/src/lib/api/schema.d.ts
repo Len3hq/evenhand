@@ -305,6 +305,79 @@ export interface paths {
         patch: operations["PrizesController_update"];
         trace?: never;
     };
+    "/api/events/{eventRef}/teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a team in an event; you become its first member. Only while the event accepts
+         *     submissions (403 `submissions_closed` / `submissions_not_open`). One team per person per
+         *     event (409 `already_on_team`); team names are unique per event (409 `team_name_taken`).
+         */
+        post: operations["TeamsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/teams/{teamRef}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A team and its members. Its members, the event's organisers and admins only. */
+        get: operations["TeamsController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/teams/{teamRef}/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A new invite link (7 days, 4 uses). Members of the team only, while the event is open. */
+        post: operations["TeamsController_createInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/invites/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What an invite link is for. Public, and does not use the invite. 410 when expired or used up. */
+        get: operations["TeamsController_preview"];
+        put?: never;
+        /** Join the invite's team. */
+        post: operations["TeamsController_join"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -518,6 +591,39 @@ export interface components {
             name?: string;
             description?: string | null;
             track?: string | null;
+        };
+        CreateTeamDto: {
+            /** @description Unique within the event. */
+            name: string;
+        };
+        TeamMemberDto: {
+            userId: string;
+            name: string;
+            email: string;
+            joinedAt: string;
+        };
+        TeamDto: {
+            id: string;
+            /** @description Fixture id (e.g. tm_01) when imported from fixtures.json. */
+            externalId: string | null;
+            eventId: string;
+            name: string;
+            members: components["schemas"]["TeamMemberDto"][];
+        };
+        InviteDto: {
+            /** @description The secret. Shown only in this response; the server keeps a hash. */
+            token: string;
+            /** @description Path to share, relative to the portal, e.g. /invites/<token>. */
+            path: string;
+            expiresAt: string;
+            maxUses: number;
+        };
+        InvitePreviewDto: {
+            teamName: string;
+            eventName: string;
+            eventSlug: string;
+            expiresAt: string;
+            usesLeft: number;
         };
     };
     responses: never;
@@ -997,6 +1103,118 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EventPrizeDto"];
+                };
+            };
+        };
+    };
+    TeamsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTeamDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamDto"];
+                };
+            };
+        };
+    };
+    TeamsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Team id or fixture id (tm_01). */
+                teamRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamDto"];
+                };
+            };
+        };
+    };
+    TeamsController_createInvite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Team id or fixture id (tm_01). */
+                teamRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteDto"];
+                };
+            };
+        };
+    };
+    TeamsController_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitePreviewDto"];
+                };
+            };
+        };
+    };
+    TeamsController_join: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamDto"];
                 };
             };
         };

@@ -22,6 +22,9 @@ export const AUDIT_ACTIONS = [
   'prize.created',
   'prize.updated',
   'prize.deleted',
+  'team.created',
+  'team.joined',
+  'invite.created',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

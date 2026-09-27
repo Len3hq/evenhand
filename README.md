@@ -101,7 +101,8 @@ Status at the end of the bootstrap (Sat 26 Sep). Claims only what is tested.
 
 Written down so a reviewer does not have to find them. Features still being built are in the table above; these are limits of the design as it stands.
 
-- **No email.** Nothing is sent: team invite links are designed to be copied and shared by hand, and there is no password-reset email. An operator resets a password with `create-admin --reset-password` (below). Sending mail would mean an SMTP server, which the offline rule excludes from the default setup.
+- **No email.** Nothing is sent: team invite links are copied and shared by hand, and there is no password-reset email. An operator resets a password with `create-admin --reset-password` (below). Sending mail would mean an SMTP server, which the offline rule excludes from the default setup.
+- **No team-size limit per event.** Each invite link admits at most 4 people and expires after 7 days, but a team can issue more links. Leaving a team and removing a member are not built yet.
 - **Demo mode is insecure on purpose.** With `DEMO_MODE=true` (the compose default) the four test tokens and the shared password are public, so the checker and a first-time visitor can get in. [Turn it off](#running-a-real-event) for a real event.
 - **No TLS in the box.** The portal serves plain HTTP on :8080. Put a reverse proxy that terminates TLS in front of it for anything beyond a laptop.
 - **Per-IP rate limits can be dodged behind the bundled proxy.** Next.js passes on a client-supplied `X-Forwarded-For`; a reverse proxy in front should overwrite it ([threat model](JUDGING.md#threat-model)).

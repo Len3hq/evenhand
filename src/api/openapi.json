@@ -698,6 +698,170 @@
           "events"
         ]
       }
+    },
+    "/api/events/{eventRef}/teams": {
+      "post": {
+        "operationId": "TeamsController_create",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTeamDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create a team in an event; you become its first member. Only while the event accepts\nsubmissions (403 `submissions_closed` / `submissions_not_open`). One team per person per\nevent (409 `already_on_team`); team names are unique per event (409 `team_name_taken`).",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/api/teams/{teamRef}": {
+      "get": {
+        "operationId": "TeamsController_get",
+        "parameters": [
+          {
+            "name": "teamRef",
+            "required": true,
+            "in": "path",
+            "description": "Team id or fixture id (tm_01).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "A team and its members. Its members, the event's organisers and admins only.",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/api/teams/{teamRef}/invites": {
+      "post": {
+        "operationId": "TeamsController_createInvite",
+        "parameters": [
+          {
+            "name": "teamRef",
+            "required": true,
+            "in": "path",
+            "description": "Team id or fixture id (tm_01).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "A new invite link (7 days, 4 uses). Members of the team only, while the event is open.",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/api/invites/{token}": {
+      "get": {
+        "operationId": "TeamsController_preview",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitePreviewDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "What an invite link is for. Public, and does not use the invite. 410 when expired or used up.",
+        "tags": [
+          "teams"
+        ]
+      },
+      "post": {
+        "operationId": "TeamsController_join",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Join the invite's team.",
+        "tags": [
+          "teams"
+        ]
+      }
     }
   },
   "info": {
@@ -1531,6 +1695,127 @@
             "maxLength": 100
           }
         }
+      },
+      "CreateTeamDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique within the event.",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "TeamMemberDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "joinedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "name",
+          "email",
+          "joinedAt"
+        ]
+      },
+      "TeamDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fixture id (e.g. tm_01) when imported from fixtures.json."
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "eventId",
+          "name",
+          "members"
+        ]
+      },
+      "InviteDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The secret. Shown only in this response; the server keeps a hash."
+          },
+          "path": {
+            "type": "string",
+            "description": "Path to share, relative to the portal, e.g. /invites/<token>."
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "maxUses": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "token",
+          "path",
+          "expiresAt",
+          "maxUses"
+        ]
+      },
+      "InvitePreviewDto": {
+        "type": "object",
+        "properties": {
+          "teamName": {
+            "type": "string"
+          },
+          "eventName": {
+            "type": "string"
+          },
+          "eventSlug": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "usesLeft": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "teamName",
+          "eventName",
+          "eventSlug",
+          "expiresAt",
+          "usesLeft"
+        ]
       }
     }
   }
