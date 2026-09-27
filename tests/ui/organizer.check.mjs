@@ -151,6 +151,24 @@ await step('the live progress dashboard flags the flat judge and refreshes by it
   await page.goto(back);
 });
 
+await step('rank the fixture event, publish it, and a visitor sees the results', async () => {
+  const back = page.url();
+  await page.goto(`${BASE}/organizer/events/evt_01`);
+  await page.click('main >> text=Results');
+  await page.getByRole('heading', { name: 'Ranking and results' }).waitFor();
+  await page.click('button:has-text("Run ranking")');
+  // As in docs/proof/normalization.md: 40 projects, 2 tie groups.
+  await page.getByText(/40 projects ranked in 2 tie groups/).waitFor();
+  await page.click('button:has-text("Publish these results")');
+  await page.getByText(/^Published /).waitFor();
+
+  const visitor = await newPage();
+  await visitor.goto(`${BASE}/events/evt_01/results`);
+  await visitor.getByRole('heading', { name: 'Sample Hack 2026: results' }).waitFor();
+  await visitor.getByText('Salt Ledger').waitFor();
+  await page.goto(back);
+});
+
 await step('appoint an organiser, then remove them', async () => {
   // priya1 is the demo participant; she competes in the demo event, not in this one.
   await page.fill('#new-organizer', 'priya1@example.org');

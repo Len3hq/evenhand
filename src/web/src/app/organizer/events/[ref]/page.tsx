@@ -54,6 +54,7 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
     { href: `/api/events/${event.slug}/export/submissions.csv`, label: 'Submissions (CSV)' },
     { href: `/api/events/${event.slug}/export/assignments.csv`, label: 'Assignments (CSV)' },
     { href: `/api/events/${event.slug}/export/scores.csv`, label: 'Scores (CSV)' },
+    { href: `/api/events/${event.slug}/export/results.csv`, label: 'Results (CSV)' },
     { href: `/api/events/${event.slug}/export/audit.csv`, label: 'Audit trail (CSV)' },
   ];
 
@@ -73,6 +74,10 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
           /{event.slug} · closes {formatUtc(event.submissionsClose)} ·{' '}
           <Link href={`/organizer/events/${event.slug}/progress`} className="underline">
             Judging progress
+          </Link>{' '}
+          ·{' '}
+          <Link href={`/organizer/events/${event.slug}/results`} className="underline">
+            Results
           </Link>{' '}
           ·{' '}
           <Link href={`/organizer/events/${event.slug}/audit`} className="underline">

@@ -45,6 +45,10 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
       return `${who} started reviewing ${it}`;
     case 'review.submitted':
       return `${who} submitted a review of ${it}: ${marks(after.values)}`;
+    case 'ranking.run':
+      return `${who} ran a ranking: ${show(after.ranked)} projects ranked in ${show(after.tieGroups)} tie group${after.tieGroups === 1 ? '' : 's'}${Number(after.listed) ? `, ${show(after.listed)} listed without a rank` : ''} (λ_b ${show(after.lambdaB)}, λ_q ${show(after.lambdaQ)})`;
+    case 'ranking.published':
+      return `${who} published the results (inputs ${String(after.inputsHash).slice(0, 12)}…, result ${String(after.outputHash).slice(0, 12)}…)`;
     case 'track.created':
       return `${who} added the track ${it}`;
     case 'track.updated':

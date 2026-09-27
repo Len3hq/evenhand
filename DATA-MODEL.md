@@ -100,13 +100,13 @@ docker compose exec api node dist/cli/cli.js import /tmp/event.json
 
 ## Export (ways out)
 
-| Export                                                     | Route                                                                                      | Status           |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------- |
-| Every review, one row per review, one column per criterion | `GET /api/events/:event/export/scores.csv` (organisers)                                    | ✅               |
-| The event's audit trail with a readable summary per entry  | `GET /api/events/:event/export/audit.csv` (organisers)                                     | ✅               |
-| Teams and members, submissions, assignments (one CSV each) | `GET /api/events/:event/export/{teams,submissions,assignments}.csv` (organisers)           | ✅               |
-| Results CSV                                                | `/api/events/:event/export/results.csv`                                                    | ⏳ with rankings |
-| Whole event in the fixtures.json shape (round trip)        | `GET /api/events/:event/export.json` (organisers), `cli export-event <event> [--out file]` | ✅               |
+| Export                                                             | Route                                                                                      | Status |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ------ |
+| Every review, one row per review, one column per criterion         | `GET /api/events/:event/export/scores.csv` (organisers)                                    | ✅     |
+| The event's audit trail with a readable summary per entry          | `GET /api/events/:event/export/audit.csv` (organisers)                                     | ✅     |
+| Teams and members, submissions, assignments (one CSV each)         | `GET /api/events/:event/export/{teams,submissions,assignments}.csv` (organisers)           | ✅     |
+| Results: the published ranking (else the newest run), with reasons | `GET /api/events/:event/export/results.csv` (organisers)                                   | ✅     |
+| Whole event in the fixtures.json shape (round trip)                | `GET /api/events/:event/export.json` (organisers), `cli export-event <event> [--out file]` | ✅     |
 
 **The event export** is the organisers' fixtures.json shape, so any DOGFOOD portal can read it, plus an `evenhand` block with what that shape cannot hold (see Import above). Ids are the fixture ids where a row has them, else ours. Only **submitted** projects and **final** reviews are exported: drafts stay private and unfinished reviews are not scores. The shape requires a track on every project, so a project without one is exported in a placeholder track `evenhand-no-track` ("No track"). Every list is sorted by id (projects by their original order), so export → import into a fresh portal → export gives a byte-identical file; `tests/api/transfer.e2e-spec.ts` checks exactly that, and that exporting `evt_01` reproduces the published fixtures.json record for record.
 

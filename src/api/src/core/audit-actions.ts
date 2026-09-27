@@ -27,6 +27,8 @@ export const AUDIT_ACTIONS = [
   'assignment.run',
   'review.started',
   'review.submitted',
+  'ranking.run',
+  'ranking.published',
   'track.created',
   'track.updated',
   'track.deleted',

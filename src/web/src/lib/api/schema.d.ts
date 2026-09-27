@@ -808,6 +808,96 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events/{eventRef}/rankings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The event's ranking runs, newest first, with whether each still matches the data. */
+        get: operations["RankingsController_list"];
+        put?: never;
+        /**
+         * Rank the event from its submitted reviews: normalised scores with uncertainty, tie groups,
+         *     a reason per project and hashes of inputs and result. Projects with one review are listed,
+         *     not ranked. The event's organisers and admins.
+         */
+        post: operations["RankingsController_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rankings/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One run with every project: the ranking receipt. */
+        get: operations["RankingsController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rankings/{runId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish a run as the event's results (409 `ranking_stale` if the data changed since). */
+        post: operations["RankingsController_publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{eventRef}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The published results, with their hashes. Public; 404 until published. */
+        get: operations["RankingsController_results"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{eventRef}/export/results.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The published ranking (else the newest run) as CSV. Organisers and admins. */
+        get: operations["RankingsController_resultsCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1415,6 +1505,78 @@ export interface components {
         };
         JudgeTracksDto: {
             tracks: string[];
+        };
+        RankingRowDto: {
+            projectId: string;
+            externalId: string | null;
+            title: string;
+            teamName: string;
+            track: string | null;
+            /** @description 1… for ranked projects; null when there is too little evidence to rank it. */
+            rank: number | null;
+            /** @description Projects in one group cannot be told apart by the data; null when not ranked. */
+            tieGroup: number | null;
+            reviews: number;
+            rawMean: number;
+            normalized: number;
+            /** @description Uncertainty of `normalized` (posterior standard deviation). */
+            sd: number;
+            /** @description Rank by raw mean minus rank by normalized score (positive: moved up). */
+            move: number | null;
+            /** @description Why the normalized score differs from the raw mean, in one line. */
+            reason: string;
+        };
+        RankingParamsDto: {
+            method: string;
+            weights: {
+                [key: string]: number;
+            };
+            lambdaB: number;
+            lambdaQ: number;
+            /** @description The chosen λ sits on the edge of the searched grid. */
+            atEdge: boolean;
+            looMse: number;
+            /** @description Leave-one-out error of predicting every review by the mean of the others. */
+            meanOnlyLooMse: number;
+            reviews: number;
+            /** @description Projects in judging with no final review; not in the ranking. */
+            unreviewed: string[];
+        };
+        RankingDto: {
+            rows: components["schemas"]["RankingRowDto"][];
+            id: string;
+            eventId: string;
+            createdAt: string;
+            publishedAt: string | null;
+            /** @description SHA-256 of the canonical inputs (reviews and weights) and of the canonical result. */
+            inputsHash: string;
+            outputHash: string;
+            /** @description False once the event's final reviews or weights have changed since this run. */
+            current: boolean;
+            params: components["schemas"]["RankingParamsDto"];
+        };
+        RankingSummaryDto: {
+            id: string;
+            eventId: string;
+            createdAt: string;
+            publishedAt: string | null;
+            /** @description SHA-256 of the canonical inputs (reviews and weights) and of the canonical result. */
+            inputsHash: string;
+            outputHash: string;
+            /** @description False once the event's final reviews or weights have changed since this run. */
+            current: boolean;
+            params: components["schemas"]["RankingParamsDto"];
+        };
+        PublicResultsDto: {
+            eventId: string;
+            eventName: string;
+            publishedAt: string;
+            method: string;
+            /** @description Anyone can recompute these from the exported data to check the published result. */
+            inputsHash: string;
+            outputHash: string;
+            tieGroups: number;
+            rows: components["schemas"]["RankingRowDto"][];
         };
     };
     responses: never;
@@ -2631,6 +2793,134 @@ export interface operations {
         };
     };
     ExportsController_assignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RankingsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RankingSummaryDto"][];
+                };
+            };
+        };
+    };
+    RankingsController_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RankingDto"];
+                };
+            };
+        };
+    };
+    RankingsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RankingDto"];
+                };
+            };
+        };
+    };
+    RankingsController_publish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RankingDto"];
+                };
+            };
+        };
+    };
+    RankingsController_results: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicResultsDto"];
+                };
+            };
+        };
+    };
+    RankingsController_resultsCsv: {
         parameters: {
             query?: never;
             header?: never;

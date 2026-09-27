@@ -1841,6 +1841,190 @@
           "export"
         ]
       }
+    },
+    "/api/events/{eventRef}/rankings": {
+      "post": {
+        "operationId": "RankingsController_run",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankingDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Rank the event from its submitted reviews: normalised scores with uncertainty, tie groups,\na reason per project and hashes of inputs and result. Projects with one review are listed,\nnot ranked. The event's organisers and admins.",
+        "tags": [
+          "rankings"
+        ]
+      },
+      "get": {
+        "operationId": "RankingsController_list",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RankingSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "The event's ranking runs, newest first, with whether each still matches the data.",
+        "tags": [
+          "rankings"
+        ]
+      }
+    },
+    "/api/rankings/{runId}": {
+      "get": {
+        "operationId": "RankingsController_get",
+        "parameters": [
+          {
+            "name": "runId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankingDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "One run with every project: the ranking receipt.",
+        "tags": [
+          "rankings"
+        ]
+      }
+    },
+    "/api/rankings/{runId}/publish": {
+      "post": {
+        "operationId": "RankingsController_publish",
+        "parameters": [
+          {
+            "name": "runId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankingDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Publish a run as the event's results (409 `ranking_stale` if the data changed since).",
+        "tags": [
+          "rankings"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/results": {
+      "get": {
+        "operationId": "RankingsController_results",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicResultsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The published results, with their hashes. Public; 404 until published.",
+        "tags": [
+          "rankings"
+        ]
+      }
+    },
+    "/api/events/{eventRef}/export/results.csv": {
+      "get": {
+        "operationId": "RankingsController_resultsCsv",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "The published ranking (else the newest run) as CSV. Organisers and admins.",
+        "tags": [
+          "rankings"
+        ]
+      }
     }
   },
   "info": {
@@ -4107,6 +4291,261 @@
         },
         "required": [
           "tracks"
+        ]
+      },
+      "RankingRowDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string"
+          },
+          "teamName": {
+            "type": "string"
+          },
+          "track": {
+            "type": "string",
+            "nullable": true
+          },
+          "rank": {
+            "type": "number",
+            "nullable": true,
+            "description": "1… for ranked projects; null when there is too little evidence to rank it."
+          },
+          "tieGroup": {
+            "type": "number",
+            "nullable": true,
+            "description": "Projects in one group cannot be told apart by the data; null when not ranked."
+          },
+          "reviews": {
+            "type": "number"
+          },
+          "rawMean": {
+            "type": "number"
+          },
+          "normalized": {
+            "type": "number"
+          },
+          "sd": {
+            "type": "number",
+            "description": "Uncertainty of `normalized` (posterior standard deviation)."
+          },
+          "move": {
+            "type": "number",
+            "nullable": true,
+            "description": "Rank by raw mean minus rank by normalized score (positive: moved up)."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why the normalized score differs from the raw mean, in one line."
+          }
+        },
+        "required": [
+          "projectId",
+          "externalId",
+          "title",
+          "teamName",
+          "track",
+          "rank",
+          "tieGroup",
+          "reviews",
+          "rawMean",
+          "normalized",
+          "sd",
+          "move",
+          "reason"
+        ]
+      },
+      "RankingParamsDto": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string"
+          },
+          "weights": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "lambdaB": {
+            "type": "number"
+          },
+          "lambdaQ": {
+            "type": "number"
+          },
+          "atEdge": {
+            "type": "boolean",
+            "description": "The chosen λ sits on the edge of the searched grid."
+          },
+          "looMse": {
+            "type": "number"
+          },
+          "meanOnlyLooMse": {
+            "type": "number",
+            "description": "Leave-one-out error of predicting every review by the mean of the others."
+          },
+          "reviews": {
+            "type": "number"
+          },
+          "unreviewed": {
+            "description": "Projects in judging with no final review; not in the ranking.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "method",
+          "weights",
+          "lambdaB",
+          "lambdaQ",
+          "atEdge",
+          "looMse",
+          "meanOnlyLooMse",
+          "reviews",
+          "unreviewed"
+        ]
+      },
+      "RankingDto": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RankingRowDto"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "inputsHash": {
+            "type": "string",
+            "description": "SHA-256 of the canonical inputs (reviews and weights) and of the canonical result."
+          },
+          "outputHash": {
+            "type": "string"
+          },
+          "current": {
+            "type": "boolean",
+            "description": "False once the event's final reviews or weights have changed since this run."
+          },
+          "params": {
+            "$ref": "#/components/schemas/RankingParamsDto"
+          }
+        },
+        "required": [
+          "rows",
+          "id",
+          "eventId",
+          "createdAt",
+          "publishedAt",
+          "inputsHash",
+          "outputHash",
+          "current",
+          "params"
+        ]
+      },
+      "RankingSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "inputsHash": {
+            "type": "string",
+            "description": "SHA-256 of the canonical inputs (reviews and weights) and of the canonical result."
+          },
+          "outputHash": {
+            "type": "string"
+          },
+          "current": {
+            "type": "boolean",
+            "description": "False once the event's final reviews or weights have changed since this run."
+          },
+          "params": {
+            "$ref": "#/components/schemas/RankingParamsDto"
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "createdAt",
+          "publishedAt",
+          "inputsHash",
+          "outputHash",
+          "current",
+          "params"
+        ]
+      },
+      "PublicResultsDto": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "eventName": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "inputsHash": {
+            "type": "string",
+            "description": "Anyone can recompute these from the exported data to check the published result."
+          },
+          "outputHash": {
+            "type": "string"
+          },
+          "tieGroups": {
+            "type": "number"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RankingRowDto"
+            }
+          }
+        },
+        "required": [
+          "eventId",
+          "eventName",
+          "publishedAt",
+          "method",
+          "inputsHash",
+          "outputHash",
+          "tieGroups",
+          "rows"
         ]
       }
     }
