@@ -64,38 +64,41 @@ The result is written to [`acceptance-report.txt`](acceptance-report.txt). The s
 
 Each claim below is checked by a command anyone can run, not asserted. Numbers are from the last run and are updated when they change.
 
-| Claim                                                          | Checked by                                                                                                                         | Result                                          |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| The organisers' checker passes                                 | `npm run acceptance` (official `run.py` against `docker compose up`)                                                               | 7 / 7 PASS                                      |
-| Roles are enforced by the API, not the UI                      | [`tests/api/isolation.e2e-spec.ts`](tests/api/isolation.e2e-spec.ts): every route × every role                                     | 7 routes × 7 roles, 49 expected status codes    |
-| A judge is refused before any lookup, so refusals leak nothing | Same file: a real and a non-existent judge get the same 403                                                                        | Pass                                            |
-| The deadline holds to the millisecond                          | [`tests/api/submissions.e2e-spec.ts`](tests/api/submissions.e2e-spec.ts): refused at the closing instant, 1 ms before gets through | Pass                                            |
-| The audit log cannot be edited or deleted, even with SQL       | [`tests/api/constraints.e2e-spec.ts`](tests/api/constraints.e2e-spec.ts): `UPDATE`, `DELETE`, `TRUNCATE` refused                   | Pass                                            |
-| The database and API have no route to the internet             | `docker compose exec api node -e "fetch('https://example.org').then(()=>console.log('online'),()=>console.log('offline'))"`        | `offline`                                       |
-| A backup restores exactly, and keeps the audit log append-only | Backup and restore commands below, restored into a second database and compared                                                    | Row counts identical; `UPDATE` on audit refused |
-| Everything else                                                | `npm run check`: format, lint, typecheck, unit and end-to-end tests                                                                | 24 unit + 85 end-to-end tests pass              |
+| Claim                                                          | Checked by                                                                                                                                                                                                   | Result                                          |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| The organisers' checker passes                                 | `npm run acceptance` (official `run.py` against `docker compose up`)                                                                                                                                         | 7 / 7 PASS                                      |
+| Roles are enforced by the API, not the UI                      | [`tests/api/isolation.e2e-spec.ts`](tests/api/isolation.e2e-spec.ts): 22 of the API's 26 operations × 7 roles. The other four are the health check and login, registration and logout, which anyone may call | 24 rows × 7 roles, 168 expected status codes    |
+| A judge is refused before any lookup, so refusals leak nothing | Same file: a real and a non-existent judge get the same 403                                                                                                                                                  | Pass                                            |
+| The deadline holds to the millisecond                          | [`tests/api/submissions.e2e-spec.ts`](tests/api/submissions.e2e-spec.ts): refused at the closing instant, 1 ms before gets through                                                                           | Pass                                            |
+| The audit log cannot be edited or deleted, even with SQL       | [`tests/api/constraints.e2e-spec.ts`](tests/api/constraints.e2e-spec.ts): `UPDATE`, `DELETE`, `TRUNCATE` refused                                                                                             | Pass                                            |
+| The database and API have no route to the internet             | `docker compose exec api node -e "fetch('https://example.org').then(()=>console.log('online'),()=>console.log('offline'))"`                                                                                  | `offline`                                       |
+| A backup restores exactly, and keeps the audit log append-only | Backup and restore commands below, restored into a second database and compared                                                                                                                              | Row counts identical; `UPDATE` on audit refused |
+| Everything else                                                | `npm run check`: format, lint, typecheck, unit and end-to-end tests                                                                                                                                          | 38 unit + 256 end-to-end tests pass             |
 
 The REST API is described by an OpenAPI 3 document, [`src/api/openapi.json`](src/api/openapi.json), served with Swagger UI at <http://localhost:8080/api/docs> (works offline).
 
 ## What works today, honestly
 
-Status at the end of the bootstrap (Sat 26 Sep). Claims only what is tested.
+Status on Sun 27 Sep. Claims only what is tested; "API" means the pages for it are still to come.
 
-| Area                                                                                       | Status                                        |
-| ------------------------------------------------------------------------------------------ | --------------------------------------------- |
-| One-command start, seeded from `fixtures.json`, runs with no internet route for db and api | ✅ done, verified                             |
-| Acceptance checker (T1 + T2, 7 checks)                                                     | ✅ 7/7 pass                                   |
-| Auth: browser sessions (httpOnly cookie + CSRF Origin check) and bearer tokens             | ✅ done, e2e-tested                           |
-| Roles per event (participant, judge, organizer) + platform admin; deny-first 403s          | ✅ done, isolation matrix e2e-tested          |
-| Deadline enforcement (server clock, exact boundary tested)                                 | ✅ on create; edit / submit / uploads to come |
-| Public gallery with search, tag filter and pagination; project pages                       | ✅ API + UI (track filter UI to come)         |
-| Judges' own scores, peer isolation, scores CSV export                                      | ✅                                            |
-| Append-only audit log (database trigger), duplicate detection on import                    | ✅ written; audit page to come                |
-| Rate limits on login / register (429)                                                      | ✅                                            |
-| Teams + invite links, draft editing, custom questions, event / track / prize admin         | ⏳ next (T1 breadth)                          |
-| Judge assignment, rubric editor, judge console, progress dashboard, all-stage CSV          | ⏳ planned (T2)                               |
-| Bias-corrected ranking, Ranking Receipt, publish, Normalization Proof                      | ⏳ planned (see [JUDGING.md](JUDGING.md))     |
-| Community voting (T3), webhooks / certificates (T4)                                        | ❌ not planned for this event                 |
+| Area                                                                                       | Status                                                                   |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| One-command start, seeded from `fixtures.json`, runs with no internet route for db and api | ✅ done, verified                                                        |
+| Acceptance checker (T1 + T2, 7 checks)                                                     | ✅ 7/7 pass                                                              |
+| Auth: browser sessions (httpOnly cookie + CSRF Origin check) and bearer tokens             | ✅ done, e2e-tested                                                      |
+| Roles per event (participant, judge, organizer) + platform admin; deny-first 403s          | ✅ done, isolation matrix e2e-tested                                     |
+| Deadline enforcement: opening and closing time, server clock, both boundaries tested       | ✅ submission create, teams and invites; edit / submit / uploads to come |
+| Public gallery with search, tag filter and pagination; project pages                       | ✅ API + UI (track filter UI to come)                                    |
+| Judges' own scores, peer isolation, scores CSV export                                      | ✅                                                                       |
+| Append-only audit log (database trigger), duplicate detection on import                    | ✅ written; audit page to come                                           |
+| Rate limits on login / register (429)                                                      | ✅                                                                       |
+| First admin for a real deployment (`create-admin`), backup and restore                     | ✅ verified                                                              |
+| Event creation and editing with dates, tracks and prizes                                   | ✅ API, e2e-tested; organiser pages to come                              |
+| Teams and invite links (hashed tokens, expiry, use limit)                                  | ✅ API, e2e-tested; pages to come                                        |
+| Draft editing and submitting, custom questions                                             | ⏳ next (T1)                                                             |
+| Judge assignment, rubric editor, judge console, progress dashboard, all-stage CSV          | ⏳ planned (T2)                                                          |
+| Bias-corrected ranking, Ranking Receipt, publish, Normalization Proof                      | ⏳ planned (see [JUDGING.md](JUDGING.md))                                |
+| Community voting (T3), webhooks / certificates (T4)                                        | ❌ not planned for this event                                            |
 
 ## Limitations
 
