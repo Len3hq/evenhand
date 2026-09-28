@@ -14,3 +14,5 @@ Add `submissions.duplicate_hold`. The index is `(event_id, team_id) WHERE supers
 ## Consequences
 
 For same-team duplicates "dismiss" is not a valid outcome (both cannot stay live); the organiser confirms, or disqualifies one. Tested in `constraints.e2e-spec.ts`.
+
+Update 2026-09-28: the confirm, dismiss and reopen flow is built ([ADR](20260928-0812-a-duplicate-decisions-and-disqualification.md)).

@@ -86,7 +86,7 @@ The REST API is described by an OpenAPI 3 document, [`src/api/openapi.json`](src
 
 ## What works today, honestly
 
-Status on Sun 27 Sep (UTC). Claims only what is tested; "API" means the pages for it are still to come.
+Status on Mon 28 Sep (UTC). Claims only what is tested; "API" means the pages for it are still to come.
 
 | Area                                                                                                                                                                                         | Status                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |

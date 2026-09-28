@@ -22,3 +22,5 @@ T1 asks for "project submission with draft and edit until the deadline" and "dea
 - There is no "withdraw" (back to draft). A team that wants out asks an organiser; disqualification is an organiser tool not built yet.
 - Judges could in principle see an entry change until the deadline; judging starts after it, so in practice they see the final version.
 - Image uploads and organiser-defined questions (both in the schema) are not part of this API yet; they are listed in the README's status table.
+
+Update 2026-09-28: disqualification is built ([ADR](20260928-0812-a-duplicate-decisions-and-disqualification.md)).
