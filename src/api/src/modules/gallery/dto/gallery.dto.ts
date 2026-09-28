@@ -55,10 +55,18 @@ export class ProjectPageDto {
   total: number;
 }
 
+/** A custom question and the team's answer to it. */
+export class ProjectAnswerDto {
+  prompt: string;
+  value: string;
+}
+
 export class ProjectDetailDto extends ProjectSummaryDto {
   description: string | null;
   repoUrl: string | null;
   demoVideoUrl: string | null;
   liveUrl: string | null;
   imageUrls: string[];
+  /** Answers to the event's public questions, in question order. Private answers never appear. */
+  answers: ProjectAnswerDto[];
 }

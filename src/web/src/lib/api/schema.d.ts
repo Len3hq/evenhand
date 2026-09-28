@@ -462,6 +462,30 @@ export interface paths {
         patch: operations["PrizesController_update"];
         trace?: never;
     };
+    "/api/events/{eventRef}/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The questions every submission answers, in order. Public: teams see what they are asked. */
+        get: operations["QuestionsController_get"];
+        /**
+         * Replace the questions (0–20, in display order). The event's organisers and admins. Rows
+         *     with an `id` keep that question and its answers; rows without one are new. Once teams have
+         *     answered or submitted, removing an answered question, making an answered private question
+         *     public, and requiring a question a submitted entry left empty are refused (409
+         *     `questions_locked`).
+         */
+        put: operations["QuestionsController_replace"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events/{eventRef}/organizers": {
         parameters: {
             query?: never;
@@ -1060,6 +1084,10 @@ export interface components {
             pageSize: number;
             total: number;
         };
+        ProjectAnswerDto: {
+            prompt: string;
+            value: string;
+        };
         ProjectDetailDto: {
             id: string;
             /** @description Fixture id (e.g. prj_01) when imported from fixtures.json. */
@@ -1078,6 +1106,14 @@ export interface components {
             demoVideoUrl: string | null;
             liveUrl: string | null;
             imageUrls: string[];
+            /** @description Answers to the event's public questions, in question order. Private answers never appear. */
+            answers: components["schemas"]["ProjectAnswerDto"][];
+        };
+        AnswerInputDto: {
+            /** @description The question's id (or the id it was imported under). */
+            question: string;
+            /** @description The answer; `null` or blank text clears it. */
+            value: string | null;
         };
         CreateSubmissionDto: {
             title: string;
@@ -1095,6 +1131,12 @@ export interface components {
             techTags?: string[];
             /** @description Track id or fixture id (e.g. trk_01). */
             track?: string;
+            /** @description Answers to the event's custom questions. Questions left out keep their answer. */
+            answers?: components["schemas"]["AnswerInputDto"][];
+        };
+        SubmissionAnswerDto: {
+            questionId: string;
+            value: string;
         };
         SubmissionDto: {
             id: string;
@@ -1111,6 +1153,8 @@ export interface components {
             demoVideoUrl: string | null;
             liveUrl: string | null;
             techTags: string[];
+            /** @description Its answers to the event's custom questions, in question order; unanswered ones are absent. */
+            answers: components["schemas"]["SubmissionAnswerDto"][];
             /**
              * @description DRAFT until a member submits it; SUBMITTED entries appear in the public gallery.
              * @enum {string}
@@ -1146,6 +1190,8 @@ export interface components {
             techTags?: string[];
             /** @description Track id or fixture id (e.g. trk_01) of this event; `null` for no track. */
             track?: string | null;
+            /** @description Answers to the event's custom questions. Questions left out keep their answer. */
+            answers?: components["schemas"]["AnswerInputDto"][];
         };
         JudgeRefDto: {
             /** @description Internal judge id (the judge's EventRole id). */
@@ -1270,6 +1316,10 @@ export interface components {
         JudgeQueueDto: {
             events: components["schemas"]["QueueEventDto"][];
         };
+        ReviewAnswerDto: {
+            prompt: string;
+            value: string;
+        };
         ReviewProjectDto: {
             id: string;
             title: string;
@@ -1282,6 +1332,8 @@ export interface components {
             techTags: string[];
             track: string | null;
             teamName: string;
+            /** @description The team's answers to the event's questions, private ones included, in question order. */
+            answers: components["schemas"]["ReviewAnswerDto"][];
         };
         ReviewCriterionDto: {
             key: string;
@@ -1457,6 +1509,31 @@ export interface components {
             name?: string;
             description?: string | null;
             track?: string | null;
+        };
+        QuestionDto: {
+            id: string;
+            /** @description The id it was imported under, if any. */
+            externalId: string | null;
+            prompt: string;
+            required: boolean;
+            isPublic: boolean;
+            order: number;
+        };
+        QuestionsDto: {
+            questions: components["schemas"]["QuestionDto"][];
+        };
+        QuestionInputDto: {
+            /** @description The question this row keeps (its id, or the id it was imported under). Omit for a new one. */
+            id?: string;
+            /** @description What the team is asked; unique within the event. */
+            prompt: string;
+            /** @description A draft can leave it empty; submitting needs an answer. Default false. */
+            required?: boolean;
+            /** @description Answers are shown in the public gallery. Default false: team, organisers and judges only. */
+            isPublic?: boolean;
+        };
+        QuestionsInputDto: {
+            questions: components["schemas"]["QuestionInputDto"][];
         };
         OrganizerDto: {
             userId: string;
@@ -2505,6 +2582,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EventPrizeDto"];
+                };
+            };
+        };
+    };
+    QuestionsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionsDto"];
+                };
+            };
+        };
+    };
+    QuestionsController_replace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuestionsInputDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionsDto"];
                 };
             };
         };

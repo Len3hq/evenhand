@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Answers } from '@/components/gallery/answers';
 import { Badge, ErrorState } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
 import type { Schemas } from '@/lib/api/types';
@@ -50,6 +51,7 @@ export default async function ProjectPage({ params }: PageProps<'/projects/[ref]
       {project.description ? (
         <p className="mt-4 whitespace-pre-line">{project.description}</p>
       ) : null}
+      <Answers answers={project.answers} className="mt-6 border-t border-border pt-4" />
       <ul className="mt-6 space-y-1 text-sm">
         {links
           .filter(([, url]) => url)

@@ -84,3 +84,51 @@ describe('rubric and score ranges', () => {
     ).rejects.toThrow(/criteria_weight_non_negative/);
   });
 });
+
+describe('custom questions and answers', () => {
+  async function questionIn(eventId: string, prompt: string) {
+    return t.prisma.customQuestion.create({ data: { eventId, prompt } });
+  }
+
+  it('rejects a blank prompt', async () => {
+    const event = await t.prisma.event.findFirstOrThrow({ where: { externalId: 'evt_01' } });
+    await expect(questionIn(event.id, '   ')).rejects.toThrow(/custom_questions_prompt_valid/);
+  });
+
+  it("rejects an answer to another event's question", async () => {
+    const [fixture, demo] = await Promise.all([
+      t.prisma.event.findFirstOrThrow({ where: { externalId: 'evt_01' } }),
+      t.prisma.event.findFirstOrThrow({ where: { slug: 'evenhand-demo' } }),
+    ]);
+    const q = await questionIn(demo.id, `Constraint probe ${Date.now()}`);
+    const submission = await t.prisma.submission.findFirstOrThrow({
+      where: { eventId: fixture.id },
+    });
+    try {
+      await expect(
+        t.prisma.answer.create({
+          data: { submissionId: submission.id, questionId: q.id, value: 'x' },
+        }),
+      ).rejects.toThrow(/is not for the event of submission/);
+    } finally {
+      await t.prisma.customQuestion.delete({ where: { id: q.id } });
+    }
+  });
+
+  it('rejects a blank answer', async () => {
+    const fixture = await t.prisma.event.findFirstOrThrow({ where: { externalId: 'evt_01' } });
+    const q = await questionIn(fixture.id, `Constraint probe ${Date.now()}`);
+    const submission = await t.prisma.submission.findFirstOrThrow({
+      where: { eventId: fixture.id },
+    });
+    try {
+      await expect(
+        t.prisma.answer.create({
+          data: { submissionId: submission.id, questionId: q.id, value: ' ' },
+        }),
+      ).rejects.toThrow(/answers_value_valid/);
+    } finally {
+      await t.prisma.customQuestion.delete({ where: { id: q.id } });
+    }
+  });
+});

@@ -5,6 +5,7 @@ import type { Event } from '../../generated/prisma/client.js';
 import type { EventExtension } from '../../seed/extension.js';
 import type { FixtureFile, FixtureProject, FixtureScore } from '../../seed/fixtures.js';
 import { manageableEvent } from '../events/manageable-event.js';
+import { questionsOf } from '../events/questions.service.js';
 
 /** fixtures.json's shape plus our optional extras. */
 export type EventExportFile = FixtureFile & { evenhand: EventExtension };
@@ -36,10 +37,11 @@ export class EventExportService {
   }
 
   async export(event: Event): Promise<EventExportFile> {
-    const [tracks, prizes, criteria, judges, teams, submissions] = await Promise.all([
+    const [tracks, prizes, criteria, questions, judges, teams, submissions] = await Promise.all([
       this.prisma.track.findMany({ where: { eventId: event.id } }),
       this.prisma.prize.findMany({ where: { eventId: event.id } }),
       this.prisma.criterion.findMany({ where: { eventId: event.id } }),
+      questionsOf(this.prisma, event.id),
       this.prisma.eventRole.findMany({
         where: { eventId: event.id, role: 'JUDGE' },
         include: { user: true, judgeTracks: true },
@@ -48,13 +50,17 @@ export class EventExportService {
         where: { eventId: event.id },
         include: { members: { include: { user: { select: { email: true } } } } },
       }),
-      this.prisma.submission.findMany({ where: { eventId: event.id, status: 'SUBMITTED' } }),
+      this.prisma.submission.findMany({
+        where: { eventId: event.id, status: 'SUBMITTED' },
+        include: { answers: true },
+      }),
     ]);
 
     const trackRef = refMap(tracks);
     const teamRef = refMap(teams);
     const judgeRef = refMap(judges);
     const projectRef = refMap(submissions);
+    const questionRef = refMap(questions);
     const needsNoTrack = submissions.some((s) => !s.trackId);
 
     const projects = [...submissions]
@@ -98,6 +104,14 @@ export class EventExportService {
       ) satisfies FixtureScore[];
 
     const byRef = new Map(submissions.map((s) => [projectRef.get(s.id)!, s]));
+    // Answers keyed by exported question id, in the order the questions are asked.
+    const asked = new Map(questions.map((q, i) => [q.id, i]));
+    const answersOf = (list: { questionId: string; value: string }[]) =>
+      Object.fromEntries(
+        [...list]
+          .sort((a, b) => asked.get(a.questionId)! - asked.get(b.questionId)!)
+          .map((a) => [questionRef.get(a.questionId)!, a.value]),
+      );
     const extras: NonNullable<EventExtension['projects']> = {};
     for (const p of projects) {
       const s = byRef.get(p.id)!;
@@ -107,6 +121,7 @@ export class EventExportService {
         ...(s.demoVideoUrl && { demo_video_url: s.demoVideoUrl }),
         ...(s.liveUrl && { live_url: s.liveUrl }),
         ...(s.techTags.length && { tech_tags: s.techTags }),
+        ...(s.answers.length && { answers: answersOf(s.answers) }),
       };
       if (Object.keys(x).length) extras[p.id] = x;
     }
@@ -162,6 +177,13 @@ export class EventExportService {
             order: c.order,
           }))
           .sort((a, b) => a.order - b.order || cmp(a.key, b.key)),
+        questions: questions.map((q) => ({
+          id: questionRef.get(q.id)!,
+          prompt: q.prompt,
+          required: q.required,
+          is_public: q.isPublic,
+          order: q.order,
+        })),
         projects: extras,
       },
     };

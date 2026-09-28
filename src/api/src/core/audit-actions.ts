@@ -27,6 +27,7 @@ export const AUDIT_ACTIONS = [
   'organizer.added',
   'organizer.removed',
   'rubric.updated',
+  'questions.updated',
   'judge.invited',
   'judge.joined',
   'judge.tracks_updated',

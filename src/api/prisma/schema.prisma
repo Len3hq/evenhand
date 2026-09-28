@@ -345,17 +345,23 @@ model SubmissionImage {
   @@map("submission_images")
 }
 
-/// Organiser-defined question every submission answers.
+/// Organiser-defined question every submission answers (T1 field set). Answers are private to
+/// the team, the event's organisers and the judges unless the question is public.
 model CustomQuestion {
-  id       String  @id @default(uuid(7)) @db.Uuid
-  eventId  String  @map("event_id") @db.Uuid
-  prompt   String
-  required Boolean @default(false)
-  order    Int     @default(0)
+  id         String  @id @default(uuid(7)) @db.Uuid
+  eventId    String  @map("event_id") @db.Uuid
+  /// Set when imported from an export, so export → import → export keeps the same ids.
+  externalId String? @map("external_id")
+  prompt     String
+  required   Boolean @default(false)
+  /// Shown with the project in the public gallery.
+  isPublic   Boolean @default(false) @map("is_public")
+  order      Int     @default(0)
 
   event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   answers Answer[]
 
+  @@unique([eventId, externalId])
   @@index([eventId])
   @@map("custom_questions")
 }

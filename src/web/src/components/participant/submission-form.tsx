@@ -19,12 +19,15 @@ const textarea =
 export function SubmissionForm({
   submission,
   tracks,
+  questions,
   readOnly,
 }: {
   submission: Submission;
   tracks: Schemas['EventTrackDto'][];
+  questions: Schemas['QuestionDto'][];
   readOnly: boolean;
 }) {
+  const answerTo = new Map(submission.answers.map((a) => [a.questionId, a.value]));
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -48,6 +51,8 @@ export function SubmissionForm({
         .map((t) => t.trim())
         .filter(Boolean),
       track: orNull('track'),
+      // Every question, so an emptied field clears its answer.
+      answers: questions.map((q) => ({ question: q.id, value: orNull(`answer-${q.id}`) })),
     };
   }
 
@@ -178,6 +183,33 @@ export function SubmissionForm({
             </select>
           </div>
         </div>
+        {questions.length ? (
+          <div className="space-y-4 border-t border-border pt-4">
+            <h2 className="text-lg font-semibold">The organisers ask</h2>
+            {questions.map((q) => (
+              <div key={q.id}>
+                <Label htmlFor={`answer-${q.id}`}>
+                  {q.prompt}
+                  {q.required ? ' (needed to submit)' : ''}
+                </Label>
+                <p id={`answer-${q.id}-hint`} className="mb-1 text-xs text-muted">
+                  {q.isPublic
+                    ? 'Shown in the public gallery.'
+                    : 'Seen only by your team, the organisers and the judges.'}
+                </p>
+                <textarea
+                  id={`answer-${q.id}`}
+                  name={`answer-${q.id}`}
+                  rows={3}
+                  maxLength={5000}
+                  aria-describedby={`answer-${q.id}-hint`}
+                  defaultValue={answerTo.get(q.id) ?? ''}
+                  className={textarea}
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
       </fieldset>
 
       {error ? <ErrorState title="Not saved" message={error} /> : null}

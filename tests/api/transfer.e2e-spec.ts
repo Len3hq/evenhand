@@ -143,7 +143,7 @@ describe('moving an event into a fresh portal', () => {
     expect(fresh('import', file)).toBe('nothing new: every row in the file already exists\n');
   });
 
-  it('carries what the shared shape cannot: dates, prizes, taglines, links, tags', async () => {
+  it('carries what the shared shape cannot: dates, prizes, questions, answers, links, tags', async () => {
     const created = await t
       .http()
       .post('/api/events')
@@ -167,6 +167,19 @@ describe('moving an event into a fresh portal', () => {
       .set(organizer)
       .send({ name: 'Best game', description: '$100', track: track.body.id });
     expect(prize.status).toBe(201);
+    const asked = await t
+      .http()
+      .put(`/api/events/${event.slug}/questions`)
+      .set(organizer)
+      .send({
+        questions: [
+          { prompt: 'What did you build?', required: true, isPublic: true },
+          { prompt: 'Private note' },
+          { prompt: 'Left unanswered' },
+        ],
+      });
+    expect(asked.status).toBe(200);
+    const [built, note, unanswered] = asked.body.questions;
 
     const player = await person();
     expect(
@@ -183,6 +196,10 @@ describe('moving an event into a fresh portal', () => {
         tagline: 'Play it',
         liveUrl: 'https://example.org/play',
         techTags: ['godot'],
+        answers: [
+          { question: note.id, value: 'Made at home' },
+          { question: built.id, value: 'A platformer' },
+        ],
       });
     expect(sub.status).toBe(201);
     expect((await t.http().post(`/api/submissions/${sub.body.id}/submit`).set(player)).status).toBe(
@@ -216,13 +233,21 @@ describe('moving an event into a fresh portal', () => {
     expect(out.evenhand.prizes).toEqual([
       { name: 'Best game', description: '$100', track: track.body.id },
     ]);
+    expect(out.evenhand.questions).toEqual([
+      { id: built.id, prompt: 'What did you build?', required: true, is_public: true, order: 0 },
+      { id: note.id, prompt: 'Private note', required: false, is_public: false, order: 1 },
+      { id: unanswered.id, prompt: 'Left unanswered', required: false, is_public: false, order: 2 },
+    ]);
     expect(out.evenhand.projects).toEqual({
       [sub.body.id]: {
         tagline: 'Play it',
         live_url: 'https://example.org/play',
         tech_tags: ['godot'],
+        answers: { [built.id]: 'A platformer', [note.id]: 'Made at home' },
       },
     });
+    // The draft's answers stay private with the draft.
+    expect(JSON.stringify(out)).not.toContain('Private draft');
 
     // And it all arrives in the fresh portal.
     fresh('import', writeJson('rich.json', out));

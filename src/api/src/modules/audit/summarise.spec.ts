@@ -122,6 +122,25 @@ describe('audit summaries', () => {
     );
   });
 
+  it('says what changed in the submission questions', () => {
+    const before = {
+      q1: { prompt: 'Who built it?', required: false, isPublic: false },
+      q2: { prompt: 'Contact number', required: true, isPublic: false },
+      q3: { prompt: 'What did you learn?', required: false, isPublic: true },
+    };
+    const after = {
+      q1: { prompt: 'Who built it, and how?', required: true, isPublic: true },
+      q3: { prompt: 'What did you learn?', required: false, isPublic: true },
+      q4: { prompt: 'Accessibility notes', required: false, isPublic: true },
+    };
+    expect(summarise({ action: 'questions.updated', before, after }, 'Ada', 'Hack')).toBe(
+      'Ada changed the submission questions: "Who built it?" reworded to "Who built it, and how?", now required, now public; added "Accessibility notes" (optional, public); removed "Contact number"',
+    );
+    expect(summarise({ action: 'questions.updated', before: after, after }, 'Ada', 'Hack')).toBe(
+      'Ada changed the submission questions: reordered the questions',
+    );
+  });
+
   it('describes judge invitations and track changes', () => {
     expect(
       summarise(

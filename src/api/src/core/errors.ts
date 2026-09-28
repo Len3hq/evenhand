@@ -32,6 +32,7 @@ export const ERROR_CODES = [
   'conflict_of_interest',
   'last_organizer',
   'rubric_locked',
+  'questions_locked',
   'already_judge',
   'judging_closed',
   'judge_has_reviews',

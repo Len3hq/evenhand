@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Answers } from '@/components/gallery/answers';
 import { ReviewForm } from '@/components/judge/review-form';
 import { Badge, Card, ErrorState } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
@@ -62,6 +63,8 @@ export default async function ReviewPage({ params }: PageProps<'/judging/[assign
           </div>
           {p.summary ? <p>{p.summary}</p> : null}
           {p.description ? <p className="whitespace-pre-line">{p.description}</p> : null}
+          {/* Private answers included: judges see everything the organisers asked. */}
+          <Answers answers={p.answers} className="border-t border-border pt-3" />
           <ul className="space-y-1 text-sm">
             {links
               .filter(([, url]) => url)

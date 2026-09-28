@@ -6,7 +6,8 @@ import { assertSubmissionsOpen } from '../../core/deadline.js';
 import { DomainError, forbidden } from '../../core/errors.js';
 import { PrismaService } from '../../core/prisma.service.js';
 import { byRef } from '../../core/refs.js';
-import type { Event, Submission } from '../../generated/prisma/client.js';
+import type { Event, Prisma, Submission } from '../../generated/prisma/client.js';
+import { missingToSubmit, writeAnswers } from './answers.js';
 import type {
   CreateSubmissionDto,
   SubmissionDto,
@@ -27,8 +28,12 @@ const EDITABLE = [
 ] as const;
 type Editable = (typeof EDITABLE)[number];
 
-/** What a draft needs before it can be submitted (the gallery card shows both). */
-const REQUIRED_TO_SUBMIT = ['title', 'summary'] as const;
+/** Answers in the order the event asks its questions. */
+const WITH_ANSWERS = {
+  answers: { orderBy: [{ question: { order: 'asc' } }, { questionId: 'asc' }] },
+} satisfies Prisma.SubmissionInclude;
+
+type SubmissionWithAnswers = Prisma.SubmissionGetPayload<{ include: typeof WITH_ANSWERS }>;
 
 @Injectable()
 export class SubmissionsService {
@@ -93,15 +98,16 @@ export class SubmissionsService {
           techTags: dto.techTags ?? [],
         },
       });
+      const answers = await writeAnswers(tx, row.id, event.id, dto.answers ?? []);
       await this.audit.record(tx, {
         actorId: actor.userId,
         eventId: event.id,
         action: 'submission.created',
         targetType: 'submission',
         targetId: row.id,
-        after: row,
+        after: { ...row, ...answers.after },
       });
-      return row;
+      return tx.submission.findUniqueOrThrow({ where: { id: row.id }, include: WITH_ANSWERS });
     });
 
     // 4. DTO out, never the raw row.
@@ -118,7 +124,10 @@ export class SubmissionsService {
     if (own) return toDto(own.submission);
 
     if (!actor.isAdmin && !actor.hasRoleAnywhere('ORGANIZER')) throw forbidden();
-    const submission = await this.prisma.submission.findFirst({ where: byRef(ref) });
+    const submission = await this.prisma.submission.findFirst({
+      where: byRef(ref),
+      include: WITH_ANSWERS,
+    });
     if (!submission) {
       if (actor.isAdmin) throw notFound();
       throw forbidden();
@@ -152,23 +161,40 @@ export class SubmissionsService {
             : await this.trackIdIn(event.id, dto.track),
     };
     const changed = EDITABLE.filter((k) => !same(submission[k], data[k]));
-    if (!changed.length) return toDto(submission);
+    if (!changed.length && !dto.answers?.length) return toDto(submission);
 
-    // 3. write + audit together; only the fields that changed are recorded.
+    // 3. write + audit together; only the fields and answers that changed are recorded.
     const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.submission.update({ where: { id: submission.id }, data });
+      const answers = await writeAnswers(tx, submission.id, event.id, dto.answers ?? []);
+      if (!changed.length && !Object.keys(answers.after).length) return null;
+      const row = await tx.submission.update({
+        where: { id: submission.id },
+        data,
+        include: WITH_ANSWERS,
+      });
+      // A submitted entry stays complete: what submitting required cannot be emptied again.
+      if (row.status === 'SUBMITTED') {
+        const missing = await missingToSubmit(tx, row);
+        if (missing.length) {
+          throw new DomainError(
+            HttpStatus.BAD_REQUEST,
+            'validation_failed',
+            `A submitted entry needs ${missing.join(' and ')}.`,
+          );
+        }
+      }
       await this.audit.record(tx, {
         actorId: actor.userId,
         eventId: event.id,
         action: 'submission.updated',
         targetType: 'submission',
         targetId: submission.id,
-        before: pick(submission, changed),
-        after: pick(row, changed),
+        before: { ...pick(submission, changed), ...answers.before },
+        after: { ...pick(row, changed), ...answers.after },
       });
       return row;
     });
-    return toDto(updated);
+    return toDto(updated ?? submission);
   }
 
   /**
@@ -180,19 +206,19 @@ export class SubmissionsService {
     const { submission, event } = await this.editable(actor, ref);
     if (submission.status === 'SUBMITTED') return toDto(submission);
 
-    const missing = REQUIRED_TO_SUBMIT.filter((k) => !submission[k]?.trim());
-    if (missing.length) {
-      throw new DomainError(
-        HttpStatus.BAD_REQUEST,
-        'validation_failed',
-        `Add ${missing.join(' and ')} before submitting.`,
-      );
-    }
-
     const submitted = await this.prisma.$transaction(async (tx) => {
+      const missing = await missingToSubmit(tx, submission);
+      if (missing.length) {
+        throw new DomainError(
+          HttpStatus.BAD_REQUEST,
+          'validation_failed',
+          `Add ${missing.join(' and ')} before submitting.`,
+        );
+      }
       const row = await tx.submission.update({
         where: { id: submission.id },
         data: { status: 'SUBMITTED', submittedAt: this.clock.now() },
+        include: WITH_ANSWERS,
       });
       await this.audit.record(tx, {
         actorId: actor.userId,
@@ -215,7 +241,7 @@ export class SubmissionsService {
   private async ownSubmission(actor: Actor, ref: string) {
     const submission = await this.prisma.submission.findFirst({
       where: { ...byRef(ref), team: { members: { some: { userId: actor.userId } } } },
-      include: { event: true },
+      include: { event: true, ...WITH_ANSWERS },
     });
     return submission ? { submission, event: submission.event } : null;
   }
@@ -267,7 +293,7 @@ const same = (a: unknown, b: unknown): boolean =>
 const pick = (row: Submission, keys: readonly Editable[]): Partial<Submission> =>
   Object.fromEntries(keys.map((k) => [k, row[k]]));
 
-function toDto(s: Submission): SubmissionDto {
+function toDto(s: SubmissionWithAnswers): SubmissionDto {
   return {
     id: s.id,
     externalId: s.externalId,
@@ -282,6 +308,7 @@ function toDto(s: Submission): SubmissionDto {
     demoVideoUrl: s.demoVideoUrl,
     liveUrl: s.liveUrl,
     techTags: s.techTags,
+    answers: s.answers.map((a) => ({ questionId: a.questionId, value: a.value })),
     status: s.status,
     submittedAt: s.submittedAt?.toISOString() ?? null,
     eligibility: s.eligibility,

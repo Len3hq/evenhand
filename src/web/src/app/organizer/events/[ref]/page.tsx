@@ -7,6 +7,7 @@ import { JudgesEditor } from '@/components/organizer/judges-editor';
 import { OrganizersEditor } from '@/components/organizer/organizers-editor';
 import { formatUtc } from '@/lib/dates';
 import { PrizesEditor } from '@/components/organizer/prizes-editor';
+import { QuestionsEditor } from '@/components/organizer/questions-editor';
 import { RubricEditor } from '@/components/organizer/rubric-editor';
 import { TracksEditor } from '@/components/organizer/tracks-editor';
 import { Badge, Card, ErrorState } from '@/components/ui';
@@ -39,9 +40,10 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
     );
   }
 
-  const [organizers, rubric, judges] = await Promise.all([
+  const [organizers, rubric, questions, judges] = await Promise.all([
     apiGet<Schemas['OrganizerDto'][]>(`/api/events/${event.id}/organizers`),
     apiGet<Schemas['RubricDto']>(`/api/events/${event.id}/criteria`),
+    apiGet<Schemas['QuestionsDto']>(`/api/events/${event.id}/questions`),
     apiGet<Schemas['JudgeDto'][]>(`/api/events/${event.id}/judges`),
   ]);
 
@@ -103,6 +105,16 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
       <Card>
         <h2 className="mb-4 text-lg font-semibold">Prizes</h2>
         <PrizesEditor eventId={event.id} prizes={event.prizes} tracks={event.tracks} />
+      </Card>
+
+      <Card>
+        <h2 className="mb-1 text-lg font-semibold">Submission questions</h2>
+        <p className="mb-4 text-sm text-muted">
+          Asked of every team beside the standard fields. Answers are seen by the team, organisers
+          and judges; tick &ldquo;public&rdquo; to show them in the gallery too. Drafts may leave
+          required questions empty, submitting may not.
+        </p>
+        <QuestionsEditor eventId={event.id} questions={questions.questions} />
       </Card>
 
       <Card>

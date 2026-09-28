@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -6,9 +7,26 @@ import {
   IsUrl,
   MaxLength,
   MinLength,
+  ValidateIf,
+  ValidateNested,
 } from 'class-validator';
+import { MAX_QUESTIONS } from '../../events/question-rules.js';
 
 const URL_OPTIONS = { protocols: ['http', 'https'], require_protocol: true };
+
+/** An answer to one of the event's custom questions (`GET /events/:eventRef/questions`). */
+export class AnswerInputDto {
+  /** The question's id (or the id it was imported under). */
+  @IsString()
+  @MaxLength(100)
+  question: string;
+
+  /** The answer; `null` or blank text clears it. */
+  @ValidateIf((o: AnswerInputDto) => o.value !== null)
+  @IsString()
+  @MaxLength(5000)
+  value: string | null;
+}
 
 export class CreateSubmissionDto {
   @IsString()
@@ -57,6 +75,14 @@ export class CreateSubmissionDto {
   @IsString()
   @MaxLength(100)
   track?: string;
+
+  /** Answers to the event's custom questions. Questions left out keep their answer. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_QUESTIONS)
+  @ValidateNested({ each: true })
+  @Type(() => AnswerInputDto)
+  answers?: AnswerInputDto[];
 }
 
 /**
@@ -109,6 +135,19 @@ export class UpdateSubmissionDto {
   @IsString()
   @MaxLength(100)
   track?: string | null;
+
+  /** Answers to the event's custom questions. Questions left out keep their answer. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_QUESTIONS)
+  @ValidateNested({ each: true })
+  @Type(() => AnswerInputDto)
+  answers?: AnswerInputDto[];
+}
+
+export class SubmissionAnswerDto {
+  questionId: string;
+  value: string;
 }
 
 /** A submission as its team (and the event's organisers) see it, draft or submitted. */
@@ -127,6 +166,8 @@ export class SubmissionDto {
   demoVideoUrl: string | null;
   liveUrl: string | null;
   techTags: string[];
+  /** Its answers to the event's custom questions, in question order; unanswered ones are absent. */
+  answers: SubmissionAnswerDto[];
   /** DRAFT until a member submits it; SUBMITTED entries appear in the public gallery. */
   status: 'DRAFT' | 'SUBMITTED';
   /** When it was first submitted. */

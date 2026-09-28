@@ -1108,6 +1108,78 @@
         ]
       }
     },
+    "/api/events/{eventRef}/questions": {
+      "get": {
+        "operationId": "QuestionsController_get",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The questions every submission answers, in order. Public: teams see what they are asked.",
+        "tags": [
+          "events"
+        ]
+      },
+      "put": {
+        "operationId": "QuestionsController_replace",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionsInputDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Replace the questions (0–20, in display order). The event's organisers and admins. Rows\nwith an `id` keep that question and its answers; rows without one are new. Once teams have\nanswered or submitted, removing an answered question, making an answered private question\npublic, and requiring a question a submitted entry left empty are refused (409\n`questions_locked`).",
+        "tags": [
+          "events"
+        ]
+      }
+    },
     "/api/events/{eventRef}/organizers": {
       "get": {
         "operationId": "OrganizersController_list",
@@ -2498,6 +2570,21 @@
           "total"
         ]
       },
+      "ProjectAnswerDto": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt",
+          "value"
+        ]
+      },
       "ProjectDetailDto": {
         "type": "object",
         "properties": {
@@ -2570,6 +2657,13 @@
             "items": {
               "type": "string"
             }
+          },
+          "answers": {
+            "description": "Answers to the event's public questions, in question order. Private answers never appear.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectAnswerDto"
+            }
           }
         },
         "required": [
@@ -2588,7 +2682,28 @@
           "repoUrl",
           "demoVideoUrl",
           "liveUrl",
-          "imageUrls"
+          "imageUrls",
+          "answers"
+        ]
+      },
+      "AnswerInputDto": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "description": "The question's id (or the id it was imported under).",
+            "maxLength": 100
+          },
+          "value": {
+            "type": "string",
+            "nullable": true,
+            "description": "The answer; `null` or blank text clears it.",
+            "maxLength": 5000
+          }
+        },
+        "required": [
+          "question",
+          "value"
         ]
       },
       "CreateSubmissionDto": {
@@ -2637,10 +2752,32 @@
             "type": "string",
             "description": "Track id or fixture id (e.g. trk_01).",
             "maxLength": 100
+          },
+          "answers": {
+            "description": "Answers to the event's custom questions. Questions left out keep their answer.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnswerInputDto"
+            }
           }
         },
         "required": [
           "title"
+        ]
+      },
+      "SubmissionAnswerDto": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "questionId",
+          "value"
         ]
       },
       "SubmissionDto": {
@@ -2695,6 +2832,13 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "answers": {
+            "description": "Its answers to the event's custom questions, in question order; unanswered ones are absent.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubmissionAnswerDto"
             }
           },
           "status": {
@@ -2753,6 +2897,7 @@
           "demoVideoUrl",
           "liveUrl",
           "techTags",
+          "answers",
           "status",
           "submittedAt",
           "eligibility",
@@ -2814,6 +2959,13 @@
             "nullable": true,
             "description": "Track id or fixture id (e.g. trk_01) of this event; `null` for no track.",
             "maxLength": 100
+          },
+          "answers": {
+            "description": "Answers to the event's custom questions. Questions left out keep their answer.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnswerInputDto"
+            }
           }
         }
       },
@@ -3246,6 +3398,21 @@
           "events"
         ]
       },
+      "ReviewAnswerDto": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt",
+          "value"
+        ]
+      },
       "ReviewProjectDto": {
         "type": "object",
         "properties": {
@@ -3291,6 +3458,13 @@
           },
           "teamName": {
             "type": "string"
+          },
+          "answers": {
+            "description": "The team's answers to the event's questions, private ones included, in question order.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewAnswerDto"
+            }
           }
         },
         "required": [
@@ -3304,7 +3478,8 @@
           "liveUrl",
           "techTags",
           "track",
-          "teamName"
+          "teamName",
+          "answers"
         ]
       },
       "ReviewCriterionDto": {
@@ -3918,6 +4093,94 @@
             "maxLength": 100
           }
         }
+      },
+      "QuestionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "The id it was imported under, if any."
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "isPublic": {
+            "type": "boolean"
+          },
+          "order": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "prompt",
+          "required",
+          "isPublic",
+          "order"
+        ]
+      },
+      "QuestionsDto": {
+        "type": "object",
+        "properties": {
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionDto"
+            }
+          }
+        },
+        "required": [
+          "questions"
+        ]
+      },
+      "QuestionInputDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The question this row keeps (its id, or the id it was imported under). Omit for a new one.",
+            "maxLength": 100
+          },
+          "prompt": {
+            "type": "string",
+            "description": "What the team is asked; unique within the event.",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "required": {
+            "type": "boolean",
+            "description": "A draft can leave it empty; submitting needs an answer. Default false."
+          },
+          "isPublic": {
+            "type": "boolean",
+            "description": "Answers are shown in the public gallery. Default false: team, organisers and judges only."
+          }
+        },
+        "required": [
+          "prompt"
+        ]
+      },
+      "QuestionsInputDto": {
+        "type": "object",
+        "properties": {
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionInputDto"
+            }
+          }
+        },
+        "required": [
+          "questions"
+        ]
       },
       "OrganizerDto": {
         "type": "object",

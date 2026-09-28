@@ -28,7 +28,8 @@ const FIXTURE_BATCH = 'fixture';
  *   criteria = union of score keys, equal weights, range 1–5.
  *
  * An Evenhand export's optional `evenhand` block (seed/extension.ts) is applied to the rows
- * this import creates: event slug and dates, prizes, rubric labels and weights, project extras.
+ * this import creates: event slug and dates, prizes, rubric labels and weights, custom
+ * questions, project extras and answers.
  */
 @Injectable()
 export class FixtureImporter {
@@ -96,6 +97,26 @@ export class FixtureImporter {
           },
         });
         bump('prizes');
+      }
+    }
+
+    // Custom questions (an Evenhand export's only), like prizes: created with the event, so a
+    // later run never brings back a question an organiser has since removed.
+    const questionId = new Map<string, string>();
+    if (createdEvent) {
+      for (const q of ext?.questions ?? []) {
+        const row = await tx.customQuestion.create({
+          data: {
+            eventId,
+            externalId: q.id,
+            prompt: q.prompt,
+            required: q.required,
+            isPublic: q.is_public,
+            order: q.order,
+          },
+        });
+        questionId.set(q.id, row.id);
+        bump('questions');
       }
     }
 
@@ -233,6 +254,12 @@ export class FixtureImporter {
           },
         });
         bump('submissions');
+        for (const [qid, value] of Object.entries(ext?.projects?.[p.id]?.answers ?? {})) {
+          const question = questionId.get(qid);
+          if (!question) continue; // the event existed already: its questions were not imported
+          await tx.answer.create({ data: { submissionId: row.id, questionId: question, value } });
+          bump('answers');
+        }
       }
       submissionId.set(p.id, row.id);
     }

@@ -173,7 +173,16 @@ export class ReviewsService {
       include: {
         review: { include: { scores: true } },
         judgeRole: { include: { event: true } },
-        submission: { include: { track: true, team: { select: { name: true } } } },
+        submission: {
+          include: {
+            track: true,
+            team: { select: { name: true } },
+            answers: {
+              include: { question: { select: { prompt: true } } },
+              orderBy: [{ question: { order: 'asc' } }, { questionId: 'asc' }],
+            },
+          },
+        },
       },
     });
     const criteria = await this.criteriaOf(a.judgeRole.eventId);
@@ -215,6 +224,7 @@ export class ReviewsService {
         techTags: s.techTags,
         track: s.track?.name ?? null,
         teamName: s.team.name,
+        answers: s.answers.map((x) => ({ prompt: x.question.prompt, value: x.value })),
       },
       criteria: criteria.map((c) => ({
         key: c.key,

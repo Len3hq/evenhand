@@ -74,7 +74,15 @@ export class GalleryService {
   async get(ref: string): Promise<ProjectDetailDto> {
     const row = await this.prisma.submission.findFirst({
       where: { ...PUBLIC_SUBMISSION, ...byRef(ref) },
-      include: { ...SUMMARY_INCLUDE, images: { orderBy: { order: 'asc' } } },
+      include: {
+        ...SUMMARY_INCLUDE,
+        images: { orderBy: { order: 'asc' } },
+        answers: {
+          where: { question: { isPublic: true } },
+          include: { question: { select: { prompt: true } } },
+          orderBy: [{ question: { order: 'asc' } }, { questionId: 'asc' }],
+        },
+      },
     });
     if (!row) {
       throw new DomainError(HttpStatus.NOT_FOUND, 'not_found', 'No such project.');
@@ -86,6 +94,7 @@ export class GalleryService {
       demoVideoUrl: row.demoVideoUrl,
       liveUrl: row.liveUrl,
       imageUrls: row.images.map((i) => i.url),
+      answers: row.answers.map((a) => ({ prompt: a.question.prompt, value: a.value })),
     };
   }
 }

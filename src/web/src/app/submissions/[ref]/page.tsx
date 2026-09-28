@@ -17,13 +17,15 @@ export default async function SubmissionPage({ params }: PageProps<'/submissions
   let submission: Schemas['SubmissionDto'];
   let event: Schemas['EventDetailDto'];
   let mine: Schemas['MyTeamDto'][];
+  let questions: Schemas['QuestionsDto'];
   try {
     submission = await apiGet<Schemas['SubmissionDto']>(
       `/api/submissions/${encodeURIComponent(ref)}`,
     );
-    [event, mine] = await Promise.all([
+    [event, mine, questions] = await Promise.all([
       apiGet<Schemas['EventDetailDto']>(`/api/events/${submission.eventId}`),
       apiGet<Schemas['MyTeamDto'][]>('/api/me/teams'),
+      apiGet<Schemas['QuestionsDto']>(`/api/events/${submission.eventId}/questions`),
     ]);
   } catch (e) {
     const message =
@@ -113,7 +115,12 @@ export default async function SubmissionPage({ params }: PageProps<'/submissions
         </Card>
       ) : null}
 
-      <SubmissionForm submission={submission} tracks={event.tracks} readOnly={!open || !onTeam} />
+      <SubmissionForm
+        submission={submission}
+        tracks={event.tracks}
+        questions={questions.questions}
+        readOnly={!open || !onTeam}
+      />
     </section>
   );
 }

@@ -15,6 +15,14 @@ export interface EventExtension {
     max: number;
     order: number;
   }[];
+  /** Custom questions, in the order teams see them. */
+  questions?: {
+    id: string;
+    prompt: string;
+    required: boolean;
+    is_public: boolean;
+    order: number;
+  }[];
   /** Keyed by project id. Only fields that are set. */
   projects?: Record<
     string,
@@ -24,6 +32,8 @@ export interface EventExtension {
       demo_video_url?: string;
       live_url?: string;
       tech_tags?: string[];
+      /** Keyed by question id. */
+      answers?: Record<string, string>;
     }
   >;
 }
@@ -124,6 +134,40 @@ export function parseExtension(
     }
   }
 
+  const questionIds = new Set<string>();
+  if (raw.questions !== undefined) {
+    if (!Array.isArray(raw.questions)) problems.push('evenhand.questions must be an array');
+    else {
+      const prompts = new Set<string>();
+      ext.questions = raw.questions.map((q, i) => {
+        const path = `evenhand.questions[${i}]`;
+        const o = isObj(q) ? q : {};
+        if (!isObj(q)) problems.push(`${path} must be an object`);
+        const bool = (v: unknown, field: string): boolean => {
+          if (typeof v !== 'boolean') problems.push(`${path}.${field} must be true or false`);
+          return v === true;
+        };
+        const row = {
+          id: optStr(o.id, `${path}.id`) ?? '',
+          prompt: optStr(o.prompt, `${path}.prompt`)?.trim() ?? '',
+          required: bool(o.required, 'required'),
+          is_public: bool(o.is_public, 'is_public'),
+          order: num(o.order, `${path}.order`),
+        };
+        if (!row.id) problems.push(`${path}.id is required`);
+        else if (questionIds.has(row.id)) problems.push(`${path}.id ${row.id} is used twice`);
+        questionIds.add(row.id);
+        if (!row.prompt || row.prompt.length > 300) {
+          problems.push(`${path}.prompt must be 1–300 characters`);
+        } else if (prompts.has(row.prompt.toLowerCase())) {
+          problems.push(`${path}.prompt is asked twice`);
+        }
+        prompts.add(row.prompt.toLowerCase());
+        return row;
+      });
+    }
+  }
+
   if (raw.projects !== undefined) {
     if (!isObj(raw.projects)) problems.push('evenhand.projects must be an object');
     else {
@@ -141,7 +185,22 @@ export function parseExtension(
             problems.push(`${path}.tech_tags must be a list of strings`);
           } else tags = p.tech_tags as string[];
         }
+        let answers: Record<string, string> | undefined;
+        if (p.answers !== undefined) {
+          if (!isObj(p.answers)) problems.push(`${path}.answers must be an object`);
+          else {
+            answers = {};
+            for (const [qid, value] of Object.entries(p.answers)) {
+              const at = `${path}.answers.${qid}`;
+              if (!questionIds.has(qid)) problems.push(`${at} refers to unknown question`);
+              if (typeof value !== 'string' || !value.trim() || value.length > 5000) {
+                problems.push(`${at} must be 1–5000 characters of text`);
+              } else answers[qid] = value;
+            }
+          }
+        }
         ext.projects[id] = {
+          answers,
           tagline: optStr(p.tagline, `${path}.tagline`),
           description: optStr(p.description, `${path}.description`),
           demo_video_url: optStr(p.demo_video_url, `${path}.demo_video_url`),

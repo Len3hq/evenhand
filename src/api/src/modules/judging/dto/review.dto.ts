@@ -51,6 +51,11 @@ export class ReviewCriterionDto {
   share: number;
 }
 
+export class ReviewAnswerDto {
+  prompt: string;
+  value: string;
+}
+
 export class ReviewProjectDto {
   id: string;
   title: string;
@@ -63,6 +68,8 @@ export class ReviewProjectDto {
   techTags: string[];
   track: string | null;
   teamName: string;
+  /** The team's answers to the event's questions, private ones included, in question order. */
+  answers: ReviewAnswerDto[];
 }
 
 export class ReviewDto {

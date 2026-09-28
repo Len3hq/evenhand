@@ -100,6 +100,32 @@ await step('set a weighted rubric; shares follow the weights', async () => {
   }
 });
 
+await step('ask two questions, reorder them, and they persist', async () => {
+  await page.click('button:has-text("Add question")');
+  await page.click('button:has-text("Add question")');
+  await page.fill('#question-0-prompt', 'Phone number for the finals');
+  await page.fill('#question-1-prompt', 'What did you build this weekend?');
+  await page.check('li:has(#question-1-prompt) >> text=Required to submit');
+  await page.check('li:has(#question-1-prompt) >> text=Show answers in the public gallery');
+  await page.click('button[aria-label="Move question 2 up"]');
+  const saved = page.waitForResponse(
+    (r) => r.url().endsWith('/questions') && r.request().method() === 'PUT' && r.ok(),
+  );
+  await page.click('button:has-text("Save questions")');
+  await saved;
+  await page.reload();
+  if (
+    (await page.locator('#question-0-prompt').inputValue()) !== 'What did you build this weekend?'
+  ) {
+    throw new Error('the questions did not persist in order');
+  }
+  if (
+    !(await page.locator('li:has(#question-0-prompt) input[type=checkbox]').first().isChecked())
+  ) {
+    throw new Error('"required" did not persist');
+  }
+});
+
 await step('a locked rubric (judging started) only offers weights and names', async () => {
   const back = page.url();
   await page.goto(`${BASE}/organizer/events/evt_01`);
@@ -240,6 +266,7 @@ await step('the audit trail tells the story in sentences', async () => {
     'Demo Organizer removed the prize "Best climate tool"',
     'Demo Organizer removed the track "Climate and energy"',
     'Demo Organizer changed the rubric: added "Impact" (weight 2, 1–5); added "Polish" (weight 1, 1–5)',
+    'Demo Organizer changed the submission questions: added "What did you build this weekend?" (required, public); added "Phone number for the finals" (optional, private)',
     'Demo Organizer made "priya1@example.org" an organiser',
     'Demo Organizer removed "priya1@example.org" as an organiser',
   ]) {

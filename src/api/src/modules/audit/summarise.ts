@@ -29,6 +29,8 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
       return `${who} removed ${it} as an organiser`;
     case 'rubric.updated':
       return `${who} changed the rubric: ${rubricChanges(entry.before, entry.after)}`;
+    case 'questions.updated':
+      return `${who} changed the submission questions: ${questionChanges(entry.before, entry.after)}`;
     case 'judge.invited':
       return `${who} created a judge invite link (${show(after.maxUses)} use${after.maxUses === 1 ? '' : 's'}) for ${list(after.tracks)}`;
     case 'judge.joined':
@@ -137,6 +139,32 @@ function rubricChanges(before: unknown, after: unknown): string {
     if (!(key in a)) parts.push(`removed ${show(asRecord(value).label)}`);
   }
   return parts.length ? parts.join('; ') : 'reordered the criteria';
+}
+
+/** Questions are stored keyed by id: say what was added, removed, reworded or re-flagged. */
+function questionChanges(before: unknown, after: unknown): string {
+  const b = asRecord(before);
+  const a = asRecord(after);
+  const flags = (q: Record<string, unknown>): string =>
+    `${q.required ? 'required' : 'optional'}, ${q.isPublic ? 'public' : 'private'}`;
+  const parts: string[] = [];
+  for (const [id, value] of Object.entries(a)) {
+    const n = asRecord(value);
+    const o = b[id] ? asRecord(b[id]) : null;
+    if (!o) {
+      parts.push(`added ${show(n.prompt)} (${flags(n)})`);
+      continue;
+    }
+    const changed: string[] = [];
+    if (o.prompt !== n.prompt) changed.push(`reworded to ${show(n.prompt)}`);
+    if (o.required !== n.required) changed.push(n.required ? 'now required' : 'now optional');
+    if (o.isPublic !== n.isPublic) changed.push(n.isPublic ? 'now public' : 'now private');
+    if (changed.length) parts.push(`${show(o.prompt)} ${changed.join(', ')}`);
+  }
+  for (const [id, value] of Object.entries(b)) {
+    if (!(id in a)) parts.push(`removed ${show(asRecord(value).prompt)}`);
+  }
+  return parts.length ? parts.join('; ') : 'reordered the questions';
 }
 
 /** `field: before → after; …` for the keys present in `after`. */

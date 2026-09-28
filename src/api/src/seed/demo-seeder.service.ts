@@ -38,7 +38,8 @@ export interface DemoLogin {
  * - judge_a = the fixture judge with the most scores (jdg_24), judge_b = the next (jdg_26);
  * - participant = the first member of the first fixture team who is not a judge;
  * - a second, *open* event ("Evenhand Demo Hack", closes 7 days after first boot) so the demo
- *   video can show a real submission — the fixture event is closed by design;
+ *   video can show a real submission — the fixture event is closed by design — with two
+ *   optional questions, one public and one for organisers and judges only;
  * - fixed bearer tokens for the four checker roles.
  */
 @Injectable()
@@ -86,6 +87,19 @@ export class DemoSeeder {
               { key: 'functionality', label: 'Functionality', order: 0 },
               { key: 'innovation', label: 'Innovation', order: 1 },
               { key: 'quality', label: 'Quality', order: 2 },
+            ],
+          },
+          customQuestions: {
+            create: [
+              {
+                prompt: 'What did you build during the event, and what existed before it?',
+                isPublic: true,
+                order: 0,
+              },
+              {
+                prompt: 'Anything the judges should know? (only organisers and judges see this)',
+                order: 1,
+              },
             ],
           },
         },

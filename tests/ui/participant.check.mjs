@@ -113,6 +113,11 @@ await step('with a summary it submits', async () => {
   await ann.fill('#summary', 'Finds the quiet hours in a noisy calendar.');
   await ann.fill('#repoUrl', 'https://example.org/quiet');
   await ann.fill('#techTags', 'typescript, postgres');
+  // The demo event asks two questions: one public, one for organisers and judges only.
+  await ann
+    .getByLabel('What did you build during the event')
+    .fill('The calendar parser, all of it.');
+  await ann.getByLabel('Anything the judges should know').fill('We are night owls.');
   await ann.click('button:has-text("Save and submit")');
   await ann.getByText('Submitted. It is in the gallery').waitFor();
   await ann.getByText('Submitted', { exact: true }).waitFor();
@@ -123,6 +128,11 @@ await step('the project is in the public gallery', async () => {
   await visitor.goto(`${BASE}/projects?q=${encodeURIComponent(title)}`);
   await visitor.getByText(`1 project matching “${title}”`).waitFor();
   await visitor.getByText(title).first().waitFor();
+  await visitor.getByRole('link', { name: title }).click();
+  await visitor.getByText('The calendar parser, all of it.').waitFor();
+  if (await visitor.getByText('We are night owls.').count()) {
+    throw new Error('a private answer is shown in the public gallery');
+  }
 });
 
 await step('Ben improves it after submitting; it stays submitted', async () => {

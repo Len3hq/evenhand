@@ -4,6 +4,7 @@ import { type CsvCell, toCsv } from '../../core/csv.js';
 import { PrismaService } from '../../core/prisma.service.js';
 import type { Event } from '../../generated/prisma/client.js';
 import { manageableEvent } from '../events/manageable-event.js';
+import { questionsOf } from '../events/questions.service.js';
 
 export interface CsvFile {
   filename: string;
@@ -56,9 +57,13 @@ export class ExportsService {
         team: { select: { id: true, externalId: true, name: true } },
         track: { select: { id: true, externalId: true, name: true } },
         supersededBy: { select: { id: true, externalId: true } },
+        answers: { select: { questionId: true, value: true } },
       },
       orderBy: [{ seedOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
     });
+    // One column per custom question, in the order teams see them. Prompts are unique within
+    // an event, and the prefix keeps them apart from the fixed columns.
+    const questions = await questionsOf(this.prisma, event.id);
     const header = [
       'project_id',
       'title',
@@ -75,6 +80,7 @@ export class ExportsService {
       'tech_tags',
       'duplicate_hold',
       'superseded_by',
+      ...questions.map((q) => `answer: ${q.prompt}`),
     ];
     const rows = subs.map((s): CsvCell[] => [
       s.externalId ?? s.id,
@@ -92,6 +98,7 @@ export class ExportsService {
       s.techTags.join(';'),
       s.duplicateHold,
       s.supersededBy ? (s.supersededBy.externalId ?? s.supersededBy.id) : '',
+      ...questions.map((q) => s.answers.find((a) => a.questionId === q.id)?.value ?? ''),
     ]);
     return file(event, 'submissions', header, rows);
   }
