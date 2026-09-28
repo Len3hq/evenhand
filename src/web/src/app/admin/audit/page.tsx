@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { AuditList } from '@/components/audit/audit-list';
 import { Button, ErrorState, Input, Label } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
@@ -7,55 +6,49 @@ import type { Schemas } from '@/lib/api/types';
 import { requireLogin } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Audit trail' };
+export const metadata: Metadata = { title: 'Platform audit trail' };
 
 const PAGE_SIZE = 50;
 const first = (v: string | string[] | undefined): string =>
   (Array.isArray(v) ? v[0] : v)?.trim() ?? '';
 
-/** Common filters, so an organiser does not need to know action names. */
+/** What happens outside any event, grouped so an admin does not need to know action names. */
 const GROUPS = [
   ['', 'Everything'],
-  ['event.', 'Event settings'],
-  ['track.', 'Tracks'],
-  ['prize.', 'Prizes'],
-  ['team.', 'Teams'],
-  ['invite.', 'Invite links'],
-  ['submission.', 'Submissions'],
+  ['auth.login_failed', 'Failed logins'],
+  ['auth.', 'Logins, logouts and new accounts'],
+  ['user.', 'Admin grants and password resets'],
+  ['token.', 'API tokens'],
+  ['request.', 'Refused requests (rate limits)'],
 ] as const;
 
-export default async function AuditPage({
-  params,
-  searchParams,
-}: PageProps<'/organizer/events/[ref]/audit'>) {
-  const { ref } = await params;
+/**
+ * The platform trail for admins: logins, failed logins, accounts, admin grants, API tokens and
+ * rate-limit refusals, with the address each came from. The API decides who may read it (admins
+ * only); this page shows its answer, so anyone else sees the refusal.
+ */
+export default async function PlatformAuditPage({ searchParams }: PageProps<'/admin/audit'>) {
   const sp = await searchParams;
   const action = first(sp.action);
   const actor = first(sp.actor);
   const page = Math.max(1, Number(first(sp.page)) || 1);
-  await requireLogin(`/organizer/events/${ref}/audit`);
+  await requireLogin('/admin/audit');
 
   const query = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (action) query.set('action', action);
   if (actor) query.set('actor', actor);
 
-  let event: Schemas['EventDto'];
-  let trail: Schemas['AuditPageDto'];
+  let trail: Schemas['PlatformAuditPageDto'];
   try {
-    event = await apiGet<Schemas['EventDto']>(`/api/events/${encodeURIComponent(ref)}`);
-    trail = await apiGet<Schemas['AuditPageDto']>(
-      `/api/events/${encodeURIComponent(ref)}/audit?${query.toString()}`,
-    );
+    trail = await apiGet<Schemas['PlatformAuditPageDto']>(`/api/audit?${query.toString()}`);
   } catch (e) {
     const message =
       e instanceof ApiError && e.status === 403
-        ? 'Only the event’s organisers and admins can read its audit trail.'
-        : e instanceof ApiError && e.status === 404
-          ? 'There is no such event.'
-          : e instanceof ApiError
-            ? e.message
-            : 'The API is not reachable.';
-    return <ErrorState title="The audit trail could not be loaded" message={message} />;
+        ? 'Only platform admins can read the platform audit trail.'
+        : e instanceof ApiError
+          ? e.message
+          : 'The API is not reachable.';
+    return <ErrorState title="The platform audit trail is not available" message={message} />;
   }
 
   const pages = Math.max(1, Math.ceil(trail.total / trail.pageSize));
@@ -68,25 +61,13 @@ export default async function AuditPage({
 
   return (
     <section>
-      <Link href={`/organizer/events/${event.slug}`} className="text-sm text-muted">
-        ← {event.name}
-      </Link>
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Audit trail</h1>
-          <p className="text-sm text-muted">
-            Everything that changed in this event, newest first. Entries cannot be edited or
-            deleted.
-          </p>
-        </div>
-        <a
-          href={`/api/events/${event.slug}/export/audit.csv`}
-          className="text-sm underline"
-          download
-        >
-          Download CSV
-        </a>
-      </div>
+      <h1 className="text-2xl font-semibold">Platform audit trail</h1>
+      <p className="max-w-3xl text-sm text-muted">
+        What happened outside any event, newest first: logins and failed logins, new accounts, admin
+        grants, password resets, API tokens and requests refused by a rate limit, with the address
+        each came from. Entries cannot be edited or deleted. Each event&apos;s own trail is on its
+        organiser page.
+      </p>
 
       <form method="get" className="mt-6 flex flex-wrap items-end gap-3">
         <div>
@@ -114,6 +95,10 @@ export default async function AuditPage({
           Filter
         </Button>
       </form>
+      <p className="mt-2 text-xs text-muted">
+        {trail.total} entr{trail.total === 1 ? 'y' : 'ies'}. A failed login has no person behind it
+        yet: find it under “Failed logins”, which names the email that was tried.
+      </p>
 
       <AuditList
         items={trail.items}

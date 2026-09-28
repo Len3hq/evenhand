@@ -40,6 +40,12 @@ export function UserNav({ me }: { me: Schemas['MeDto'] | null }) {
           Organise
         </Link>
       ) : null}
+      {/* Shown to admins only; the API refuses everyone else anyway. */}
+      {me.isAdmin ? (
+        <Link href="/admin/audit" className={link}>
+          Admin
+        </Link>
+      ) : null}
       <span className="max-w-[12rem] truncate whitespace-nowrap text-sm" title={me.email}>
         {me.name}
         {me.isAdmin ? <span className="ml-1 text-xs text-muted">(admin)</span> : null}

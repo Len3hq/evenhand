@@ -73,5 +73,28 @@ await step('an organiser sees "Organise"', async () => {
   if (!(await org.locator('header').innerText()).includes('Organise')) throw new Error('missing');
 });
 
+await step(
+  'only an admin reads the platform trail, which shows the failed login above',
+  async () => {
+    // Still logged in as the new participant: no Admin link, and the API's refusal on the page.
+    if ((await header()).includes('Admin')) throw new Error('a participant sees "Admin"');
+    await page.goto(`${BASE}/admin/audit`);
+    await page.getByText('Only platform admins can read the platform audit trail.').waitFor();
+
+    const admin = await newPage();
+    await logIn(admin, 'admin@evenhand.local');
+    await admin.click('header >> text=Admin');
+    await admin.waitForURL(`${BASE}/admin/audit`);
+    await admin.getByRole('heading', { name: 'Platform audit trail' }).waitFor();
+    await admin.selectOption('#action', 'auth.login_failed');
+    await admin.click('button:has-text("Filter")');
+    await admin.waitForURL(/action=auth\.login_failed/);
+    const entry = admin.locator('li', { hasText: `Failed login for ${email}` }).first();
+    await entry.waitFor();
+    // Every platform entry says where it came from.
+    if (!/ · from \S+/.test(await entry.innerText())) throw new Error('no address shown');
+  },
+);
+
 await browser.close();
 finish('Accounts');
