@@ -51,28 +51,68 @@ export function Label({ htmlFor, children }: { htmlFor: string; children: ReactN
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cx('rounded-lg border border-border bg-surface p-4', className)}>
+    <div className={cx('rounded-lg border border-border bg-surface p-4 shadow-sm', className)}>
       {children}
     </div>
   );
 }
+
+const BADGE_TONES = {
+  neutral: 'border-border text-muted',
+  warning: 'border-warning text-warning',
+  success: 'border-success text-success',
+  accent: 'border-transparent bg-accent-soft text-fg',
+} as const;
 
 export function Badge({
   children,
   tone = 'neutral',
 }: {
   children: ReactNode;
-  tone?: 'neutral' | 'warning';
+  tone?: keyof typeof BADGE_TONES;
 }) {
   return (
-    <span
-      className={cx(
-        'inline-block rounded-full border px-2 py-0.5 text-xs',
-        tone === 'warning' ? 'border-warning text-warning' : 'border-border text-muted',
-      )}
-    >
+    <span className={cx('inline-block rounded-full border px-2 py-0.5 text-xs', BADGE_TONES[tone])}>
       {children}
     </span>
+  );
+}
+
+// Written out in full so Tailwind generates each class.
+const TILES = [
+  'bg-tile-1',
+  'bg-tile-2',
+  'bg-tile-3',
+  'bg-tile-4',
+  'bg-tile-5',
+  'bg-tile-6',
+] as const;
+
+/**
+ * A project's tile: its initials on a colour picked from the title, so the same project always
+ * looks the same. Projects have no images yet, and nothing may be fetched from elsewhere.
+ */
+export function ProjectTile({ title, size = 'md' }: { title: string; size?: 'md' | 'lg' }) {
+  let hash = 0;
+  for (const ch of title) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  const initials =
+    title
+      .split(/\s+/)
+      .filter((w) => /\p{L}|\p{N}/u.test(w))
+      .slice(0, 2)
+      .map((w) => [...w].find((c) => /\p{L}|\p{N}/u.test(c))!.toUpperCase())
+      .join('') || '?';
+  return (
+    <div
+      aria-hidden="true"
+      className={cx(
+        'flex shrink-0 items-center justify-center rounded-md font-semibold tracking-wide text-tile-fg',
+        TILES[hash % TILES.length],
+        size === 'lg' ? 'h-16 w-16 text-xl' : 'h-11 w-11 text-sm',
+      )}
+    >
+      {initials}
+    </div>
   );
 }
 

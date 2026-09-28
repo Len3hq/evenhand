@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Answers } from '@/components/gallery/answers';
 import { ReviewForm } from '@/components/judge/review-form';
-import { Badge, Card, ErrorState } from '@/components/ui';
+import { Badge, Card, ErrorState, ProjectTile } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
 import type { Schemas } from '@/lib/api/types';
 import { requireLogin } from '@/lib/session';
@@ -50,12 +50,17 @@ export default async function ReviewPage({ params }: PageProps<'/judging/[assign
             : 'withdrawn from judging by the organisers (disqualified or replaced by a newer copy)'}
         </span>
       </div>
-      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_22rem]">
         <article className="space-y-3">
-          <h1 className="text-2xl font-semibold">{p.title}</h1>
-          {p.tagline ? <p className="text-muted">{p.tagline}</p> : null}
+          <div className="flex items-start gap-3">
+            <ProjectTile title={p.title} />
+            <div>
+              <h1 className="text-2xl font-semibold">{p.title}</h1>
+              {p.tagline ? <p className="text-muted">{p.tagline}</p> : null}
+            </div>
+          </div>
           <div className="flex flex-wrap gap-2">
-            {p.track ? <Badge>{p.track}</Badge> : null}
+            {p.track ? <Badge tone="accent">{p.track}</Badge> : null}
             <Badge>Team {p.teamName}</Badge>
             {p.techTags.map((t) => (
               <Badge key={t}>{t}</Badge>
@@ -78,8 +83,10 @@ export default async function ReviewPage({ params }: PageProps<'/judging/[assign
               ))}
           </ul>
         </article>
-        <Card>
-          <ReviewForm review={review} />
+        {/* Stays in view while the judge reads a long description. */}
+        <Card className="lg:sticky lg:top-20">
+          {/* Keyed so moving to another project never carries marks or focus state across. */}
+          <ReviewForm key={review.assignmentId} review={review} />
         </Card>
       </div>
     </section>

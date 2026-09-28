@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { Button, ErrorState } from '@/components/ui';
 import { apiPost, apiPut } from '@/lib/api/client';
 import type { Schemas } from '@/lib/api/types';
@@ -11,10 +11,25 @@ type Saving = 'idle' | 'saving' | 'saved' | 'error';
 
 const AUTOSAVE_MS = 700;
 
+/** The next criterion without a mark after `from` (wrapping), or `from` when all are marked. */
+function nextUnmarked(review: Review, values: Record<string, number>, from: number): number {
+  const n = review.criteria.length;
+  for (let step = 1; step <= n; step++) {
+    const i = (from + step) % n;
+    if (values[review.criteria[i]!.key] === undefined) return i;
+  }
+  return from;
+}
+
 /**
  * Marks and a comment for one project. Every change is saved as a draft shortly after you make
  * it; Submit saves, makes the review final and opens the next project in your queue. The API
  * checks every mark against the rubric and refuses changes once final or after judging closes.
+ *
+ * Keyboard scoring, for a judge working through a queue: a digit marks the highlighted
+ * criterion and moves to the next unmarked one; [ and ] open the previous and next project.
+ * The keys only act while focus is inside this panel and never while typing the comment
+ * (WCAG 2.1.4), and the radios keep their own arrow-key behaviour.
  */
 export function ReviewForm({ review }: { review: Review }) {
   const router = useRouter();
@@ -25,7 +40,20 @@ export function ReviewForm({ review }: { review: Review }) {
   const [submitting, setSubmitting] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef({ values, comment });
+  const panel = useRef<HTMLDivElement>(null);
   const readOnly = review.state === 'FINAL' || !review.judgingOpen || !review.inJudging;
+  // The highlighted criterion: the first without a mark.
+  const [active, setActive] = useState(() =>
+    Math.max(
+      0,
+      review.criteria.findIndex((c) => review.values[c.key] === undefined),
+    ),
+  );
+
+  // Ready for the keyboard as soon as the project opens.
+  useEffect(() => {
+    if (!readOnly) panel.current?.focus({ preventScroll: true });
+  }, [readOnly]);
 
   async function flush(): Promise<boolean> {
     if (timer.current) clearTimeout(timer.current);
@@ -50,6 +78,35 @@ export function ReviewForm({ review }: { review: Review }) {
     setSaving('idle');
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => void flush(), AUTOSAVE_MS);
+  }
+
+  function mark(index: number, value: number) {
+    const c = review.criteria[index]!;
+    const next = { ...values, [c.key]: value };
+    change({ values: next });
+    setActive(nextUnmarked(review, next, index));
+  }
+
+  function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('textarea, select, input:not([type=radio])')) return;
+    // Moving through the queue also works on a submitted review; marking does not.
+    if (e.key === '[' || e.key === ']') {
+      const id = e.key === '[' ? review.previousAssignmentId : review.nextAssignmentId;
+      if (id) {
+        e.preventDefault();
+        void go(id);
+      }
+      return;
+    }
+    if (readOnly || !/^[0-9]$/.test(e.key) || !review.criteria.length) return;
+    const c = review.criteria[active]!;
+    // "0" is 10 on a scale that reaches 10.
+    const n = e.key === '0' ? 10 : Number(e.key);
+    if (n < c.min || n > c.max) return;
+    e.preventDefault();
+    mark(active, n);
   }
 
   /** Leaves for another project, saving a pending change first so no mark is lost. */
@@ -84,7 +141,13 @@ export function ReviewForm({ review }: { review: Review }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div
+      ref={panel}
+      tabIndex={-1}
+      onKeyDown={onKeyDown}
+      aria-describedby={readOnly ? undefined : 'review-keys'}
+      className="space-y-5 focus:outline-none"
+    >
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium">
           {review.state === 'FINAL'
@@ -100,15 +163,22 @@ export function ReviewForm({ review }: { review: Review }) {
         </span>
       </div>
 
-      {review.criteria.map((c) => (
-        <fieldset key={c.key} disabled={readOnly}>
-          <legend className="text-sm font-medium">
+      {review.criteria.map((c, index) => (
+        <fieldset
+          key={c.key}
+          disabled={readOnly}
+          onFocus={() => setActive(index)}
+          className={`-mx-2 rounded-md px-2 py-1.5 ${
+            !readOnly && index === active ? 'bg-accent-soft/60 ring-1 ring-accent' : ''
+          }`}
+        >
+          <legend className="float-left w-full text-sm font-medium">
             {c.label}{' '}
             <span className="font-normal text-muted">
               ({Math.round(c.share * 100)}% of the score)
             </span>
           </legend>
-          <div className="mt-2 flex flex-wrap gap-1">
+          <div className="clear-left flex flex-wrap gap-1.5 pt-2">
             {Array.from({ length: c.max - c.min + 1 }, (_, i) => c.min + i).map((n) => (
               <label key={n} className="cursor-pointer">
                 <input
@@ -116,10 +186,10 @@ export function ReviewForm({ review }: { review: Review }) {
                   name={`mark-${c.key}`}
                   value={n}
                   checked={values[c.key] === n}
-                  onChange={() => change({ values: { ...values, [c.key]: n } })}
+                  onChange={() => mark(index, n)}
                   className="peer sr-only"
                 />
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-sm peer-checked:border-accent peer-checked:bg-accent peer-checked:text-accent-fg peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-surface text-sm font-medium tabular-nums transition-colors hover:border-accent peer-checked:border-accent peer-checked:bg-accent peer-checked:text-accent-fg peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent">
                   {n}
                 </span>
               </label>
@@ -127,6 +197,14 @@ export function ReviewForm({ review }: { review: Review }) {
           </div>
         </fieldset>
       ))}
+      {readOnly ? null : (
+        <p id="review-keys" className="text-xs text-muted">
+          Keyboard: type a mark for the highlighted criterion; it moves on by itself.{' '}
+          <kbd className="rounded border border-border px-1">[</kbd> and{' '}
+          <kbd className="rounded border border-border px-1">]</kbd> open the previous and next
+          project.
+        </p>
+      )}
 
       <div>
         <label htmlFor="review-comment" className="mb-1 block text-sm font-medium">

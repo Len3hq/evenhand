@@ -199,7 +199,13 @@ await step('Ben judges the project assigned to him, with autosave and a final su
   }
   await ben.click('button:has-text("Submit review")');
   await ben.getByText('Mark every criterion before submitting: Polish.').waitFor();
-  await ben.click('label:has(input[name="mark-polish"][value="3"])');
+  // Keyboard scoring: focus is still in the scoring panel, and Polish, the only criterion
+  // without a mark, is the highlighted one, so typing 3 marks it.
+  await ben.keyboard.press('3');
+  if (!(await ben.locator('input[name="mark-polish"][value="3"]').isChecked())) {
+    throw new Error('typing a digit did not mark the highlighted criterion');
+  }
+  await ben.getByText('Draft saved').waitFor();
   await ben.fill('#review-comment', 'Clear and useful.');
   await ben.click('button:has-text("Submit review")');
   await ben.waitForURL(`${BASE}/judging`);

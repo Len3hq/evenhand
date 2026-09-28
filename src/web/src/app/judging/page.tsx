@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: 'Judging' };
 const STATE = {
   NOT_STARTED: { label: 'Not started', tone: 'warning' },
   DRAFT: { label: 'Draft', tone: 'warning' },
-  FINAL: { label: 'Submitted', tone: 'neutral' },
+  FINAL: { label: 'Submitted', tone: 'success' },
 } as const;
 
 /** Your judging queue in every event you judge. */
@@ -78,11 +78,12 @@ export default async function JudgingPage() {
               >
                 <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
               </div>
-              <ol className="mt-4 space-y-1 text-sm">
+              <ol className="mt-4 divide-y divide-border text-sm">
                 {e.items.map((i) => (
-                  <li key={i.assignmentId} className="flex items-center justify-between gap-2">
-                    <Link href={`/judging/${i.assignmentId}`} className="underline">
-                      {i.position + 1}. {i.title}
+                  <li key={i.assignmentId} className="flex items-center justify-between gap-2 py-2">
+                    <Link href={`/judging/${i.assignmentId}`} className="hover:underline">
+                      <span className="mr-2 text-muted tabular-nums">{i.position + 1}.</span>
+                      {i.title}
                     </Link>
                     <Badge tone={STATE[i.state].tone}>{STATE[i.state].label}</Badge>
                   </li>

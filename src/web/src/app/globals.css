@@ -12,8 +12,18 @@
   --border: #e7e5e4;
   --accent: #0f766e;
   --accent-fg: #ffffff;
+  --accent-soft: #ccfbf1;
+  --success: #15803d;
   --danger: #b91c1c;
   --warning: #a16207;
+  /* Project tiles in the gallery: a colour picked from the title, since projects have no image. */
+  --tile-1: #ccfbf1;
+  --tile-2: #e0e7ff;
+  --tile-3: #fef3c7;
+  --tile-4: #fce7f3;
+  --tile-5: #dcfce7;
+  --tile-6: #e0f2fe;
+  --tile-fg: #1c1917;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,8 +35,17 @@
     --border: #292524;
     --accent: #2dd4bf;
     --accent-fg: #042f2e;
+    --accent-soft: #134e4a;
+    --success: #4ade80;
     --danger: #f87171;
     --warning: #facc15;
+    --tile-1: #134e4a;
+    --tile-2: #312e81;
+    --tile-3: #713f12;
+    --tile-4: #831843;
+    --tile-5: #14532d;
+    --tile-6: #0c4a6e;
+    --tile-fg: #f5f5f4;
   }
 }
 
@@ -38,8 +57,17 @@
   --color-border: var(--border);
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-tile-1: var(--tile-1);
+  --color-tile-2: var(--tile-2);
+  --color-tile-3: var(--tile-3);
+  --color-tile-4: var(--tile-4);
+  --color-tile-5: var(--tile-5);
+  --color-tile-6: var(--tile-6);
+  --color-tile-fg: var(--tile-fg);
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
