@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Answers } from '@/components/gallery/answers';
+import { ProjectImages } from '@/components/gallery/project-images';
 import { ReviewForm } from '@/components/judge/review-form';
 import { Badge, Card, ErrorState, ProjectTile } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
@@ -66,6 +67,7 @@ export default async function ReviewPage({ params }: PageProps<'/judging/[assign
               <Badge key={t}>{t}</Badge>
             ))}
           </div>
+          <ProjectImages title={p.title} images={p.images} />
           {p.summary ? <p>{p.summary}</p> : null}
           {p.description ? <p className="whitespace-pre-line">{p.description}</p> : null}
           {/* Private answers included: judges see everything the organisers asked. */}

@@ -3,7 +3,13 @@ import { APP_FILTER, APP_GUARD, APP_PIPE, Reflector } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuditService } from './audit.service.js';
 import { ActorService } from './auth/actor.service.js';
-import { AUTH_RATE_LIMIT, EXPORT_RATE_LIMIT, REVIEW_RATE_LIMIT } from './auth/decorators.js';
+import {
+  AUTH_RATE_LIMIT,
+  EXPORT_RATE_LIMIT,
+  IMAGE_RATE_LIMIT,
+  REVIEW_RATE_LIMIT,
+  UPLOAD_RATE_LIMIT,
+} from './auth/decorators.js';
 import { RoleGuard } from './auth/role.guard.js';
 import { SessionGuard } from './auth/session.guard.js';
 import { Clock, SystemClock } from './clock.js';
@@ -31,7 +37,13 @@ const marked = (key: string, ctx: ExecutionContext): boolean =>
   imports: [
     ThrottlerModule.forRootAsync({
       useFactory: (config: AppConfig) => [
-        { name: 'default', ttl: MINUTE_MS, limit: config.rateLimitDefaultPerMin },
+        {
+          name: 'default',
+          ttl: MINUTE_MS,
+          limit: config.rateLimitDefaultPerMin,
+          // Image downloads have their own, larger limit (below).
+          skipIf: (ctx) => marked(IMAGE_RATE_LIMIT, ctx),
+        },
         {
           name: 'auth',
           ttl: MINUTE_MS,
@@ -53,6 +65,20 @@ const marked = (key: string, ctx: ExecutionContext): boolean =>
           ttl: MINUTE_MS,
           limit: config.rateLimitReviewPerMin,
           skipIf: (ctx) => !marked(REVIEW_RATE_LIMIT, ctx),
+          generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
+        },
+        {
+          name: 'upload',
+          ttl: MINUTE_MS,
+          limit: config.rateLimitUploadPerMin,
+          skipIf: (ctx) => !marked(UPLOAD_RATE_LIMIT, ctx),
+          generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
+        },
+        {
+          name: 'image',
+          ttl: MINUTE_MS,
+          limit: config.rateLimitImagePerMin,
+          skipIf: (ctx) => !marked(IMAGE_RATE_LIMIT, ctx),
           generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
         },
       ],

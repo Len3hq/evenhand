@@ -1,4 +1,5 @@
 import { IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { SubmissionImageDto } from '../../images/dto/image.dto.js';
 
 export class SaveReviewDto {
   /**
@@ -70,6 +71,8 @@ export class ReviewProjectDto {
   teamName: string;
   /** The team's answers to the event's questions, private ones included, in question order. */
   answers: ReviewAnswerDto[];
+  /** The team's images, cover first. */
+  images: SubmissionImageDto[];
 }
 
 export class ReviewDto {

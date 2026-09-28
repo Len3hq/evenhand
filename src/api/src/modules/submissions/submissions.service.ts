@@ -7,6 +7,7 @@ import { DomainError, forbidden } from '../../core/errors.js';
 import { PrismaService } from '../../core/prisma.service.js';
 import { byRef } from '../../core/refs.js';
 import type { Event, Prisma, Submission } from '../../generated/prisma/client.js';
+import { IMAGE_ORDER, toImageDto } from '../images/image-dto.js';
 import { missingToSubmit, writeAnswers } from './answers.js';
 import type {
   CreateSubmissionDto,
@@ -31,6 +32,8 @@ type Editable = (typeof EDITABLE)[number];
 /** Answers in the order the event asks its questions. */
 const WITH_ANSWERS = {
   answers: { orderBy: [{ question: { order: 'asc' } }, { questionId: 'asc' }] },
+  // Images are managed by the images module; the team sees them with the rest of its entry.
+  images: { orderBy: IMAGE_ORDER },
 } satisfies Prisma.SubmissionInclude;
 
 type SubmissionWithAnswers = Prisma.SubmissionGetPayload<{ include: typeof WITH_ANSWERS }>;
@@ -309,6 +312,7 @@ function toDto(s: SubmissionWithAnswers): SubmissionDto {
     liveUrl: s.liveUrl,
     techTags: s.techTags,
     answers: s.answers.map((a) => ({ questionId: a.questionId, value: a.value })),
+    images: s.images.map(toImageDto),
     status: s.status,
     submittedAt: s.submittedAt?.toISOString() ?? null,
     eligibility: s.eligibility,

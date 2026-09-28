@@ -14,6 +14,8 @@ src/api/src/generated/
 .env.*
 !.env.example
 .cache/
+# files uploaded while developing (Docker keeps them in the `uploads` volume)
+uploads/
 
 # OS / editor
 .DS_Store

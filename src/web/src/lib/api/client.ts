@@ -32,3 +32,18 @@ export const apiPut = <T>(path: `/api/${string}`, body: unknown): Promise<T> =>
   apiSend<T>('PUT', path, body);
 
 export const apiDelete = (path: `/api/${string}`): Promise<void> => apiSend<void>('DELETE', path);
+
+/**
+ * Uploads one file as the multipart field "file". The browser sets the multipart boundary itself,
+ * so no Content-Type is given here; it also sends the Origin the API's CSRF check expects.
+ */
+export async function apiUpload<T>(path: `/api/${string}`, file: File): Promise<T> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch(path, { method: 'POST', body: form });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as ApiErrorBody | null;
+    throw new Error(err?.message ?? `Upload failed (${res.status})`);
+  }
+  return (await res.json()) as T;
+}

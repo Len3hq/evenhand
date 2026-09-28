@@ -1,7 +1,9 @@
 // A team's path in a real browser: register, start a team, invite a teammate by link, draft,
 // submit, appear in the gallery, keep editing. Uses the open demo event. Run with
 // `npm run test:ui`.
-/* global fetch -- used inside page callbacks, which run in the browser */
+/* global fetch, document -- used inside page callbacks, which run in the browser */
+/* global Buffer -- Node */
+import { crc32, deflateSync } from 'node:zlib';
 import { BASE, finish, openBrowser, step } from './harness.mjs';
 
 const { browser, newPage } = await openBrowser();
@@ -27,6 +29,39 @@ const api = (page, token, path, data, method = 'POST') =>
     [path, data, method, token],
   );
 const stamp = Date.now();
+
+/** A small solid-colour PNG, built here so the check needs no image file. */
+function png(width, height) {
+  const chunk = (type, data) => {
+    const body = Buffer.concat([Buffer.from(type, 'latin1'), data]);
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([len, body, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8; // bit depth
+  header[9] = 2; // RGB
+  const row = Buffer.alloc(1 + width * 3);
+  for (let x = 0; x < width; x++) row.set([15, 118, 110], 1 + x * 3);
+  const pixels = Buffer.concat(Array.from({ length: height }, () => row));
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(pixels)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+/** True once the image matching `selector` on `page` has loaded (the CSP let it through). */
+const imageLoaded = (page, selector) =>
+  page.waitForFunction((sel) => {
+    const img = document.querySelector(sel);
+    return Boolean(img && img.complete && img.naturalWidth > 0);
+  }, selector);
 const teamName = `Browser Team ${stamp}`;
 const title = `Browser Project ${stamp}`;
 const password = 'a long enough password';
@@ -123,12 +158,35 @@ await step('with a summary it submits', async () => {
   await ann.getByText('Submitted', { exact: true }).waitFor();
 });
 
+await step('add an image: re-encoded by the API, it becomes the cover', async () => {
+  await ann.setInputFiles('#image-upload', {
+    name: 'screenshot.png',
+    mimeType: 'image/png',
+    buffer: png(320, 200),
+  });
+  await ann.getByText('Cover', { exact: true }).waitFor();
+  await imageLoaded(ann, 'img[alt="Image 1 of 1"]');
+  // Not an image: the API's answer is shown, and nothing is added.
+  await ann.setInputFiles('#image-upload', {
+    name: 'notes.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('<html>not an image</html>'),
+  });
+  await ann.getByText('Upload a JPEG, PNG or WebP image.').waitFor();
+  if ((await ann.locator('img[alt^="Image "]').count()) !== 1) {
+    throw new Error('a refused upload was added');
+  }
+});
+
 await step('the project is in the public gallery', async () => {
   const visitor = await newPage();
   await visitor.goto(`${BASE}/projects?q=${encodeURIComponent(title)}`);
   await visitor.getByText(`1 project matching “${title}”`).waitFor();
   await visitor.getByText(title).first().waitFor();
+  // The card shows the cover's thumbnail, served by the portal itself.
+  await imageLoaded(visitor, 'main li img[src*="/api/images/"][src$="/thumb"]');
   await visitor.getByRole('link', { name: title }).click();
+  await imageLoaded(visitor, `img[alt="${title}: image 1 of 1"]`);
   await visitor.getByText('The calendar parser, all of it.').waitFor();
   if (await visitor.getByText('We are night owls.').count()) {
     throw new Error('a private answer is shown in the public gallery');

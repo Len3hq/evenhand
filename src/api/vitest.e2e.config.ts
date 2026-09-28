@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config } from 'dotenv';
 import { defineConfig } from 'vitest/config';
@@ -21,6 +23,10 @@ const e2eEnv = {
   RATE_LIMIT_EXPORT_PER_MIN: '10000',
   RATE_LIMIT_REVIEW_PER_MIN: '10000',
   AUTH_FAILURES_PER_MIN: '10000',
+  RATE_LIMIT_UPLOAD_PER_MIN: '10000',
+  RATE_LIMIT_IMAGE_PER_MIN: '10000',
+  // Uploaded files go to a folder of their own, never a developer's ./uploads.
+  UPLOADS_DIR: join(tmpdir(), 'evenhand-e2e-uploads'),
 };
 // global-setup.ts seeds through the CLI from this process, so it needs the same settings as
 // the test workers; without them it seeds without demo data unless a local .env happens to

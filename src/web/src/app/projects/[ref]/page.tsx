@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Answers } from '@/components/gallery/answers';
+import { ProjectImages } from '@/components/gallery/project-images';
 import { Badge, Card, ErrorState, ProjectTile } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
 import type { Schemas } from '@/lib/api/types';
@@ -40,7 +41,8 @@ export default async function ProjectPage({ params }: PageProps<'/projects/[ref]
         ← Gallery
       </Link>
       <header className="flex items-start gap-4">
-        <ProjectTile title={project.title} size="lg" />
+        {/* The initials tile stands in for a cover image; with images, the cover shows below. */}
+        {project.images.length ? null : <ProjectTile title={project.title} size="lg" />}
         <div className="min-w-0">
           <h1 className="text-3xl font-semibold tracking-tight">{project.title}</h1>
           {project.tagline ? <p className="mt-1 text-lg text-muted">{project.tagline}</p> : null}
@@ -56,6 +58,7 @@ export default async function ProjectPage({ params }: PageProps<'/projects/[ref]
 
       <div className="grid gap-6 lg:grid-cols-[1fr_21rem]">
         <div className="max-w-3xl">
+          <ProjectImages title={project.title} images={project.images} className="mb-6" />
           {project.summary ? <p className="text-lg">{project.summary}</p> : null}
           {project.description ? (
             <p className="mt-4 whitespace-pre-line">{project.description}</p>

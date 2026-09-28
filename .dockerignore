@@ -8,6 +8,7 @@ src/api/src/generated
 .git
 .github
 .cache
+**/uploads
 .env
 .env.*
 docs

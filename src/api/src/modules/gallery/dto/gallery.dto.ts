@@ -1,5 +1,6 @@
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { PageQueryDto } from '../../../core/pagination.js';
+import { SubmissionImageDto } from '../../images/dto/image.dto.js';
 
 export class GalleryQueryDto extends PageQueryDto {
   /** Free-text search over title, tagline and summary (case-insensitive). */
@@ -41,6 +42,7 @@ export class ProjectSummaryDto {
   title: string;
   tagline: string | null;
   summary: string | null;
+  /** The cover image's thumbnail (the first uploaded image), or null without images. */
   thumbnailUrl: string | null;
   techTags: string[];
   track: TrackRefDto | null;
@@ -66,7 +68,8 @@ export class ProjectDetailDto extends ProjectSummaryDto {
   repoUrl: string | null;
   demoVideoUrl: string | null;
   liveUrl: string | null;
-  imageUrls: string[];
+  /** Uploaded images, cover first. */
+  images: SubmissionImageDto[];
   /** Answers to the event's public questions, in question order. Private answers never appear. */
   answers: ProjectAnswerDto[];
 }

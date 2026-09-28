@@ -71,6 +71,7 @@ A real deployment has no default admin and no default password. The first admin 
 - Base images are pinned by **multi-arch digest** (amd64 + arm64).
 - Network is used only while building (`npm ci`, `apt-get openssl`). At runtime nothing calls out: no web fonts (system font stack), no image optimiser (`images.unoptimized`), telemetry off (`NEXT_TELEMETRY_DISABLED`, and `CHECKPOINT_DISABLE` for the Prisma CLI that migrates on every start), no CDN (Swagger UI assets are served locally), and the browser is held to the same origin by the Content-Security-Policy.
 - **The offline drill** (`npm run drill`, `tests/offline/drill.sh`) proves it end to end: a fresh clone is built, then started on empty volumes with every network internal (`tests/offline/offline.compose.yml`); a request to the internet must fail from the api and from the web container's network, and the organisers' `run.py` and every browser check then run inside that network, where `localhost:8080` is the portal and nothing else is reachable.
+- Image uploads are re-encoded by sharp in the api. Its libvips is a prebuilt binary for each architecture, installed by `npm ci` with the image; nothing is compiled or downloaded at runtime, and the drill uploads an image with the network cut ([ADR](docs/decisions/20260928-1500-a-image-uploads.md)).
 - Prisma: the CLI is a runtime dependency (never fetched with `npx`), the client is generated at build time, and the Dockerfile **fails the build** if the schema engine for the runtime's OpenSSL is missing. Otherwise the container would try to download one at start-up. We hit exactly this bug once (details in the Dockerfile).
 - `next build` needs neither the API nor the database: data pages are rendered per request.
 
@@ -78,22 +79,23 @@ A real deployment has no default admin and no default password. The first admin 
 
 Environment variables, validated at start-up (`core/config.ts`; a bad value stops the process with a clear message):
 
-| Variable                                                  | Default                       | Meaning                                                                                     |
-| --------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                            | – (required)                  | Postgres connection string                                                                  |
-| `PORT`                                                    | `3001`                        | API port                                                                                    |
-| `DEMO_MODE`                                               | `false` (compose sets `true`) | Seed demo tokens and passwords, and accept demo tokens                                      |
-| `DEMO_PASSWORD`                                           | `evenhand-demo`               | Password of every seeded account in demo mode                                               |
-| `ALLOWED_ORIGINS`                                         | `http://localhost:8080`       | Origins allowed to make cookie-authenticated writes                                         |
-| `RATE_LIMIT_DEFAULT_PER_MIN` / `RATE_LIMIT_LOGIN_PER_MIN` | `300` / `10`                  | Per-IP limits                                                                               |
-| `RATE_LIMIT_EXPORT_PER_MIN` / `RATE_LIMIT_REVIEW_PER_MIN` | `30` / `120`                  | Exports (all CSVs and the event JSON, one counter) and judge review writes, per IP          |
-| `AUTH_FAILURES_PER_MIN`                                   | `20`                          | Failed token or session checks per IP before it is refused (429) for the rest of the minute |
-| `SESSION_TTL_HOURS`                                       | `168`                         | Browser session lifetime                                                                    |
-| `UPLOADS_DIR`                                             | `./uploads`                   | File uploads (volume `uploads` in Docker)                                                   |
-| `FIXTURES_PATH`                                           | `data/fixtures.json`          | Used by `cli seed` when `--fixtures` is not given                                           |
-| `SEED_FIXTURES` (api container)                           | `true`                        | Import `fixtures.json` on start; `false` for a real event                                   |
-| `API_REWRITE_TARGET` (web, **build time**)                | `http://localhost:3001`       | Where Next proxies `/api/*`. Rewrites are fixed at build time.                              |
-| `API_INTERNAL_URL` (web, run time)                        | `http://localhost:3001`       | Where server components call the API                                                        |
+| Variable                                                  | Default                       | Meaning                                                                                                                                               |
+| --------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                            | – (required)                  | Postgres connection string                                                                                                                            |
+| `PORT`                                                    | `3001`                        | API port                                                                                                                                              |
+| `DEMO_MODE`                                               | `false` (compose sets `true`) | Seed demo tokens and passwords, and accept demo tokens                                                                                                |
+| `DEMO_PASSWORD`                                           | `evenhand-demo`               | Password of every seeded account in demo mode                                                                                                         |
+| `ALLOWED_ORIGINS`                                         | `http://localhost:8080`       | Origins allowed to make cookie-authenticated writes                                                                                                   |
+| `RATE_LIMIT_DEFAULT_PER_MIN` / `RATE_LIMIT_LOGIN_PER_MIN` | `300` / `10`                  | Per-IP limits                                                                                                                                         |
+| `RATE_LIMIT_EXPORT_PER_MIN` / `RATE_LIMIT_REVIEW_PER_MIN` | `30` / `120`                  | Exports (all CSVs and the event JSON, one counter) and judge review writes, per IP                                                                    |
+| `RATE_LIMIT_UPLOAD_PER_MIN` / `RATE_LIMIT_IMAGE_PER_MIN`  | `30` / `3000`                 | Image uploads (each is re-encoded), and image downloads, which have their own limit instead of the default one (a gallery page loads many thumbnails) |
+| `AUTH_FAILURES_PER_MIN`                                   | `20`                          | Failed token or session checks per IP before it is refused (429) for the rest of the minute                                                           |
+| `SESSION_TTL_HOURS`                                       | `168`                         | Browser session lifetime                                                                                                                              |
+| `UPLOADS_DIR`                                             | `./uploads`                   | Re-encoded project images (volume `uploads` in Docker)                                                                                                |
+| `FIXTURES_PATH`                                           | `data/fixtures.json`          | Used by `cli seed` when `--fixtures` is not given                                                                                                     |
+| `SEED_FIXTURES` (api container)                           | `true`                        | Import `fixtures.json` on start; `false` for a real event                                                                                             |
+| `API_REWRITE_TARGET` (web, **build time**)                | `http://localhost:3001`       | Where Next proxies `/api/*`. Rewrites are fixed at build time.                                                                                        |
+| `API_INTERNAL_URL` (web, run time)                        | `http://localhost:3001`       | Where server components call the API                                                                                                                  |
 
 ## Testing
 

@@ -8,6 +8,7 @@ import { PrismaService } from '../../core/prisma.service.js';
 import { isUuid } from '../../core/refs.js';
 import type { Criterion, Event, Submission } from '../../generated/prisma/client.js';
 import type { JudgeQueueDto, ReviewDto, ReviewState, SaveReviewDto } from './dto/review.dto.js';
+import { IMAGE_ORDER, toImageDto } from '../images/image-dto.js';
 import { IN_JUDGING } from './in-judging.js';
 
 /**
@@ -181,6 +182,7 @@ export class ReviewsService {
               include: { question: { select: { prompt: true } } },
               orderBy: [{ question: { order: 'asc' } }, { questionId: 'asc' }],
             },
+            images: { orderBy: IMAGE_ORDER },
           },
         },
       },
@@ -225,6 +227,7 @@ export class ReviewsService {
         track: s.track?.name ?? null,
         teamName: s.team.name,
         answers: s.answers.map((x) => ({ prompt: x.question.prompt, value: x.value })),
+        images: s.images.map(toImageDto),
       },
       criteria: criteria.map((c) => ({
         key: c.key,

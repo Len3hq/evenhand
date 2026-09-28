@@ -2332,6 +2332,190 @@
           "integrity"
         ]
       }
+    },
+    "/api/submissions/{ref}/images": {
+      "post": {
+        "operationId": "ImagesController_add",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Submission id or fixture id (prj_01).",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubmissionImageDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Add an image to your team's submission (multipart, one file in the field \"file\", at most\n8 MB). JPEG, PNG or WebP, at most 40 megapixels; it is re-encoded to WebP with its metadata\nremoved. At most 6 per project; the first is the cover. Team members only, until the\ndeadline: both are checked before the upload is read.",
+        "tags": [
+          "images"
+        ]
+      }
+    },
+    "/api/submissions/{ref}/images/{imageId}": {
+      "delete": {
+        "operationId": "ImagesController_remove",
+        "parameters": [
+          {
+            "name": "imageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Submission id or fixture id (prj_01).",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubmissionImageDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Remove one of your team's images. Team members only, until the deadline.",
+        "tags": [
+          "images"
+        ]
+      }
+    },
+    "/api/submissions/{ref}/images/order": {
+      "put": {
+        "operationId": "ImagesController_reorder",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Submission id or fixture id (prj_01).",
+            "schema": {}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderImagesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubmissionImageDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Put your team's images in a new order; the first becomes the cover.",
+        "tags": [
+          "images"
+        ]
+      }
+    },
+    "/api/images/{id}": {
+      "get": {
+        "operationId": "ImagesController_full",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "An image (WebP). Public when its project is in the gallery; otherwise for the project's\nteam, the event's organisers and its assigned judges (401 / 403 for anyone else).",
+        "tags": [
+          "images"
+        ]
+      }
+    },
+    "/api/images/{id}/thumb": {
+      "get": {
+        "operationId": "ImagesController_thumb",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "The image's 640 × 400 thumbnail (WebP), with the same visibility as the image.",
+        "tags": [
+          "images"
+        ]
+      }
     }
   },
   "info": {
@@ -2505,7 +2689,8 @@
           },
           "thumbnailUrl": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "The cover image's thumbnail (the first uploaded image), or null without images."
           },
           "techTags": {
             "type": "array",
@@ -2570,6 +2755,35 @@
           "total"
         ]
       },
+      "SubmissionImageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "description": "The image, at most 1600 px on its longest side (WebP)."
+          },
+          "thumbUrl": {
+            "type": "string",
+            "description": "A 640 × 400 crop for cards (WebP)."
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "thumbUrl",
+          "width",
+          "height"
+        ]
+      },
       "ProjectAnswerDto": {
         "type": "object",
         "properties": {
@@ -2612,7 +2826,8 @@
           },
           "thumbnailUrl": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "The cover image's thumbnail (the first uploaded image), or null without images."
           },
           "techTags": {
             "type": "array",
@@ -2652,10 +2867,11 @@
             "type": "string",
             "nullable": true
           },
-          "imageUrls": {
+          "images": {
+            "description": "Uploaded images, cover first.",
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/SubmissionImageDto"
             }
           },
           "answers": {
@@ -2682,7 +2898,7 @@
           "repoUrl",
           "demoVideoUrl",
           "liveUrl",
-          "imageUrls",
+          "images",
           "answers"
         ]
       },
@@ -2841,6 +3057,13 @@
               "$ref": "#/components/schemas/SubmissionAnswerDto"
             }
           },
+          "images": {
+            "description": "Uploaded images, cover first (POST /submissions/:ref/images).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubmissionImageDto"
+            }
+          },
           "status": {
             "description": "DRAFT until a member submits it; SUBMITTED entries appear in the public gallery.",
             "enum": [
@@ -2898,6 +3121,7 @@
           "liveUrl",
           "techTags",
           "answers",
+          "images",
           "status",
           "submittedAt",
           "eligibility",
@@ -3465,6 +3689,13 @@
             "items": {
               "$ref": "#/components/schemas/ReviewAnswerDto"
             }
+          },
+          "images": {
+            "description": "The team's images, cover first.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubmissionImageDto"
+            }
           }
         },
         "required": [
@@ -3479,7 +3710,8 @@
           "techTags",
           "track",
           "teamName",
-          "answers"
+          "answers",
+          "images"
         ]
       },
       "ReviewCriterionDto": {
@@ -5255,6 +5487,23 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "ReorderImagesDto": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "description": "Every image id of the submission, in the new order; the first becomes the cover.",
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "order"
         ]
       }
     }

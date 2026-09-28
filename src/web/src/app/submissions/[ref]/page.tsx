@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ImageManager } from '@/components/participant/image-manager';
 import { SubmissionForm } from '@/components/participant/submission-form';
 import { Badge, Card, ErrorState } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
@@ -121,6 +122,17 @@ export default async function SubmissionPage({ params }: PageProps<'/submissions
         questions={questions.questions}
         readOnly={!open || !onTeam}
       />
+
+      <Card>
+        <h2 className="mb-3 text-lg font-semibold">Images</h2>
+        <ImageManager
+          submissionId={submission.id}
+          images={submission.images}
+          readOnly={
+            !open || !onTeam || submission.supersededById !== null || submission.duplicateHold
+          }
+        />
+      </Card>
     </section>
   );
 }

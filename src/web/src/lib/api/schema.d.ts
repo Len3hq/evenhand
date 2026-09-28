@@ -1029,6 +1029,99 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/submissions/{ref}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add an image to your team's submission (multipart, one file in the field "file", at most
+         *     8 MB). JPEG, PNG or WebP, at most 40 megapixels; it is re-encoded to WebP with its metadata
+         *     removed. At most 6 per project; the first is the cover. Team members only, until the
+         *     deadline: both are checked before the upload is read.
+         */
+        post: operations["ImagesController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/submissions/{ref}/images/{imageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove one of your team's images. Team members only, until the deadline. */
+        delete: operations["ImagesController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/submissions/{ref}/images/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put your team's images in a new order; the first becomes the cover. */
+        put: operations["ImagesController_reorder"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/images/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An image (WebP). Public when its project is in the gallery; otherwise for the project's
+         *     team, the event's organisers and its assigned judges (401 / 403 for anyone else).
+         */
+        get: operations["ImagesController_full"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/images/{id}/thumb": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The image's 640 × 400 thumbnail (WebP), with the same visibility as the image. */
+        get: operations["ImagesController_thumb"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1072,6 +1165,7 @@ export interface components {
             title: string;
             tagline: string | null;
             summary: string | null;
+            /** @description The cover image's thumbnail (the first uploaded image), or null without images. */
             thumbnailUrl: string | null;
             techTags: string[];
             track: components["schemas"]["TrackRefDto"] | null;
@@ -1083,6 +1177,15 @@ export interface components {
             page: number;
             pageSize: number;
             total: number;
+        };
+        SubmissionImageDto: {
+            id: string;
+            /** @description The image, at most 1600 px on its longest side (WebP). */
+            url: string;
+            /** @description A 640 × 400 crop for cards (WebP). */
+            thumbUrl: string;
+            width: number;
+            height: number;
         };
         ProjectAnswerDto: {
             prompt: string;
@@ -1096,6 +1199,7 @@ export interface components {
             title: string;
             tagline: string | null;
             summary: string | null;
+            /** @description The cover image's thumbnail (the first uploaded image), or null without images. */
             thumbnailUrl: string | null;
             techTags: string[];
             track: components["schemas"]["TrackRefDto"] | null;
@@ -1105,7 +1209,8 @@ export interface components {
             repoUrl: string | null;
             demoVideoUrl: string | null;
             liveUrl: string | null;
-            imageUrls: string[];
+            /** @description Uploaded images, cover first. */
+            images: components["schemas"]["SubmissionImageDto"][];
             /** @description Answers to the event's public questions, in question order. Private answers never appear. */
             answers: components["schemas"]["ProjectAnswerDto"][];
         };
@@ -1155,6 +1260,8 @@ export interface components {
             techTags: string[];
             /** @description Its answers to the event's custom questions, in question order; unanswered ones are absent. */
             answers: components["schemas"]["SubmissionAnswerDto"][];
+            /** @description Uploaded images, cover first (POST /submissions/:ref/images). */
+            images: components["schemas"]["SubmissionImageDto"][];
             /**
              * @description DRAFT until a member submits it; SUBMITTED entries appear in the public gallery.
              * @enum {string}
@@ -1334,6 +1441,8 @@ export interface components {
             teamName: string;
             /** @description The team's answers to the event's questions, private ones included, in question order. */
             answers: components["schemas"]["ReviewAnswerDto"][];
+            /** @description The team's images, cover first. */
+            images: components["schemas"]["SubmissionImageDto"][];
         };
         ReviewCriterionDto: {
             key: string;
@@ -1826,6 +1935,10 @@ export interface components {
         DisqualifyDto: {
             /** @description Shown to the team and recorded in the audit trail. */
             reason: string;
+        };
+        ReorderImagesDto: {
+            /** @description Every image id of the submission, in the new order; the first becomes the cover. */
+            order: string[];
         };
     };
     responses: never;
@@ -3389,6 +3502,122 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["EntryDto"];
                 };
+            };
+        };
+    };
+    ImagesController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Submission id or fixture id (prj_01). */
+                ref: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionImageDto"][];
+                };
+            };
+        };
+    };
+    ImagesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                imageId: string;
+                /** @description Submission id or fixture id (prj_01). */
+                ref: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionImageDto"][];
+                };
+            };
+        };
+    };
+    ImagesController_reorder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Submission id or fixture id (prj_01). */
+                ref: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderImagesDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionImageDto"][];
+                };
+            };
+        };
+    };
+    ImagesController_full: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ImagesController_thumb: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

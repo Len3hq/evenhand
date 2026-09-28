@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { Badge, Card, ProjectTile } from '@/components/ui';
 import type { Schemas } from '@/lib/api/types';
@@ -5,9 +6,19 @@ import type { Schemas } from '@/lib/api/types';
 export function ProjectCard({ project }: { project: Schemas['ProjectSummaryDto'] }) {
   const ref = project.externalId ?? project.id;
   return (
-    <Card className="relative flex h-full flex-col transition-shadow hover:shadow-md has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-accent">
+    <Card className="relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-accent">
+      {project.thumbnailUrl ? (
+        // The team's cover image; decorative here, since the title names the project.
+        <Image
+          src={project.thumbnailUrl}
+          alt=""
+          width={640}
+          height={400}
+          className="-mx-4 -mt-4 mb-3 h-auto w-[calc(100%+2rem)] max-w-none border-b border-border"
+        />
+      ) : null}
       <div className="flex items-start gap-3">
-        <ProjectTile title={project.title} />
+        {project.thumbnailUrl ? null : <ProjectTile title={project.title} />}
         <div className="min-w-0">
           <h2 className="font-semibold leading-snug">
             {/* The link covers the whole card (after:inset-0), so the card is one target. */}

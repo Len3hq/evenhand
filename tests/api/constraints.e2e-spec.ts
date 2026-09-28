@@ -132,3 +132,16 @@ describe('custom questions and answers', () => {
     }
   });
 });
+
+describe('submission_images', () => {
+  it('rejects an image size the API never stores, and a negative order', async () => {
+    const s = await t.prisma.submission.findFirstOrThrow();
+    const row = (width: number, height: number, order = 0) =>
+      t.prisma.submissionImage.create({
+        data: { submissionId: s.id, url: '/api/images/x', width, height, order },
+      });
+    await expect(row(0, 10)).rejects.toThrow(/submission_images_size_valid/);
+    await expect(row(1601, 10)).rejects.toThrow(/submission_images_size_valid/);
+    await expect(row(10, 10, -1)).rejects.toThrow(/submission_images_order_valid/);
+  });
+});

@@ -89,6 +89,12 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
       return `${who} disqualified ${it}: ${str(after.reason)}`;
     case 'submission.reinstated':
       return `${who} reinstated ${it}`;
+    case 'submission.image_added':
+      return `${who} added an image to ${it}`;
+    case 'submission.image_removed':
+      return `${who} removed an image from ${it}`;
+    case 'submission.images_reordered':
+      return `${who} reordered the images of ${it}`;
     case 'fixtures.imported':
       return `${who} imported the event from fixtures.json`;
     case 'demo.seeded':

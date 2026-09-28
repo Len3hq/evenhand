@@ -47,6 +47,9 @@ export const ERROR_CODES = [
   'already_disqualified',
   'not_disqualified',
   'not_in_judging',
+  'unsupported_image',
+  'payload_too_large',
+  'too_many_images',
   'team_name_taken',
   'invite_expired',
   'invite_used_up',
@@ -91,6 +94,7 @@ const STATUS_CODES: Partial<Record<number, ErrorCode>> = {
   [HttpStatus.UNAUTHORIZED]: 'unauthenticated',
   [HttpStatus.FORBIDDEN]: 'forbidden',
   [HttpStatus.NOT_FOUND]: 'not_found',
+  [HttpStatus.PAYLOAD_TOO_LARGE]: 'payload_too_large',
   [HttpStatus.TOO_MANY_REQUESTS]: 'rate_limited',
 };
 

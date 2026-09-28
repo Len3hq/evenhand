@@ -10,6 +10,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { SubmissionImageDto } from '../../images/dto/image.dto.js';
 import { MAX_QUESTIONS } from '../../events/question-rules.js';
 
 const URL_OPTIONS = { protocols: ['http', 'https'], require_protocol: true };
@@ -168,6 +169,8 @@ export class SubmissionDto {
   techTags: string[];
   /** Its answers to the event's custom questions, in question order; unanswered ones are absent. */
   answers: SubmissionAnswerDto[];
+  /** Uploaded images, cover first (POST /submissions/:ref/images). */
+  images: SubmissionImageDto[];
   /** DRAFT until a member submits it; SUBMITTED entries appear in the public gallery. */
   status: 'DRAFT' | 'SUBMITTED';
   /** When it was first submitted. */

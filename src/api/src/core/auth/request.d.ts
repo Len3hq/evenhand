@@ -1,4 +1,4 @@
-import type { Event } from '../../generated/prisma/client.js';
+import type { Event, Submission } from '../../generated/prisma/client.js';
 import type { Actor } from './actor.js';
 
 declare module 'express-serve-static-core' {
@@ -7,5 +7,7 @@ declare module 'express-serve-static-core' {
     actor?: Actor;
     /** Set by SubmissionsOpenGuard: the event named by the route's :eventRef. */
     event?: Event;
+    /** Set by EditableSubmissionGuard: the caller's own submission named by :ref, with its event. */
+    submission?: Submission & { event: Event };
   }
 }

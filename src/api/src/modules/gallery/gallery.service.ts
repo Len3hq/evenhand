@@ -4,6 +4,7 @@ import { pageArgs } from '../../core/pagination.js';
 import { PrismaService } from '../../core/prisma.service.js';
 import { byRef, eventByRef } from '../../core/refs.js';
 import type { Prisma } from '../../generated/prisma/client.js';
+import { IMAGE_ORDER, toImageDto } from '../images/image-dto.js';
 import type {
   GalleryQueryDto,
   ProjectDetailDto,
@@ -16,7 +17,7 @@ import type {
  * Both copies of a *pending* duplicate stay visible until the organiser decides
  * (BUILD-PLAN decision 5). Drafts and disqualified projects never appear.
  */
-const PUBLIC_SUBMISSION: Prisma.SubmissionWhereInput = {
+export const PUBLIC_SUBMISSION: Prisma.SubmissionWhereInput = {
   status: 'SUBMITTED',
   eligibility: 'ELIGIBLE',
   supersededById: null,
@@ -25,6 +26,8 @@ const PUBLIC_SUBMISSION: Prisma.SubmissionWhereInput = {
 const SUMMARY_INCLUDE = {
   track: { select: { id: true, externalId: true, name: true } },
   team: { select: { name: true } },
+  // The cover: the first image, for the card's thumbnail.
+  images: { orderBy: IMAGE_ORDER, take: 1, select: { id: true, width: true, height: true } },
 } satisfies Prisma.SubmissionInclude;
 
 type SubmissionWithSummary = Prisma.SubmissionGetPayload<{ include: typeof SUMMARY_INCLUDE }>;
@@ -76,7 +79,7 @@ export class GalleryService {
       where: { ...PUBLIC_SUBMISSION, ...byRef(ref) },
       include: {
         ...SUMMARY_INCLUDE,
-        images: { orderBy: { order: 'asc' } },
+        images: { orderBy: IMAGE_ORDER },
         answers: {
           where: { question: { isPublic: true } },
           include: { question: { select: { prompt: true } } },
@@ -93,7 +96,7 @@ export class GalleryService {
       repoUrl: row.repoUrl,
       demoVideoUrl: row.demoVideoUrl,
       liveUrl: row.liveUrl,
-      imageUrls: row.images.map((i) => i.url),
+      images: row.images.map(toImageDto),
       answers: row.answers.map((a) => ({ prompt: a.question.prompt, value: a.value })),
     };
   }
@@ -107,7 +110,8 @@ function toSummary(row: SubmissionWithSummary): ProjectSummaryDto {
     title: row.title,
     tagline: row.tagline,
     summary: row.summary,
-    thumbnailUrl: row.thumbnailUrl,
+    // Uploaded images replace the unused thumbnail_url column: the cover's thumbnail.
+    thumbnailUrl: row.images[0] ? toImageDto(row.images[0]).thumbUrl : null,
     techTags: row.techTags,
     track: row.track,
     teamName: row.team.name,

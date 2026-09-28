@@ -333,11 +333,18 @@ model Submission {
   @@map("submissions")
 }
 
+/// An image a team uploaded. The file is re-encoded by the API (WebP, metadata removed) and
+/// stored as `<id>.webp` and `<id>-thumb.webp` in UPLOADS_DIR; `url` is where the API serves it.
+/// The first by `order` is the project's cover. CHECKs in the migration keep the sizes sane.
 model SubmissionImage {
-  id           String @id @default(uuid(7)) @db.Uuid
-  submissionId String @map("submission_id") @db.Uuid
+  id           String   @id @default(uuid(7)) @db.Uuid
+  submissionId String   @map("submission_id") @db.Uuid
   url          String
-  order        Int    @default(0)
+  order        Int      @default(0)
+  /// Pixel size of the stored (re-encoded) full image.
+  width        Int
+  height       Int
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
