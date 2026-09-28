@@ -9,6 +9,13 @@ Built for [DOGFOOD 2026](https://dogfoodhack.com): "build the platform that will
 
 Everything runs on your own machine, with the network off. No accounts, no hosted services.
 
+| At a glance      |                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tiers claimed    | **T1 and T2**, both verified by the organisers' checker: [7 / 7 PASS](acceptance-report.txt)                                                                                                                                                                                                                                                    |
+| Bonus challenges | **Normalization Proof** ([docs/proof/normalization.md](docs/proof/normalization.md), regenerated and checked by a test), **Threat Model** ([JUDGING.md](JUDGING.md#threat-model)), **API First** ([OpenAPI 3](src/api/openapi.json), Swagger UI at `/api/docs`). **Pairwise Mode** is not attempted: the fixtures hold ratings, not comparisons |
+| Not built        | Community voting (T3); webhooks, certificates, signed records and an embeddable widget (T4)                                                                                                                                                                                                                                                     |
+| Read next        | [ARCHITECTURE.md](ARCHITECTURE.md) · [DATA-MODEL.md](DATA-MODEL.md) · [JUDGING.md](JUDGING.md) · [DECISIONS.md](DECISIONS.md)                                                                                                                                                                                                                   |
+
 ---
 
 ## Quick start
@@ -51,6 +58,22 @@ curl -H 'Authorization: Bearer dev-judge-b-44de' localhost:8080/api/judges/jdg_2
 
 To start again from an empty database: `docker compose down -v && docker compose up`.
 
+## A ten-minute tour
+
+Log in at <http://localhost:8080/login> with the password `evenhand-demo`.
+
+1. **As a visitor,** open the [gallery](http://localhost:8080/projects): search, filter by event and track, and open a project to see how it is judged.
+2. **As a participant** (`priya1@example.org`): _My teams_ → the Demo Team in the open **Evenhand Demo Hack** → start a submission, answer the organisers' questions, add images, submit. It appears in the gallery; the draft never did.
+3. **As an organiser** (`organizer@evenhand.local`): _Organise_ → **Sample Hack 2026**, the organisers' fixture event:
+   - settings: tracks, prizes, the weighted rubric, questions, judge invite links and _Run assignment_;
+   - _Judging progress_: who has finished, and the fixtures' flat judge (jdg_07, 4/4/4 on everything) flagged;
+   - _Entries and duplicates_: the planted Dry Harbour duplicate, with whose reviews would move before you confirm (and an _Undo_);
+   - _Results_: run a ranking and read its receipt (normalized scores ± uncertainty, tie groups, a reason per project, hashes), then publish it to the public results page;
+   - _Audit trail_: every step above as a sentence.
+4. **As a judge** (`diego.herrera@example.org`, fixture judge jdg_24): _Judging_ lists his 11 submitted reviews; new projects appear when an organiser runs assignment. Score with the keyboard: a digit marks the highlighted criterion, `[` and `]` move through the queue.
+5. **As the admin** (`admin@evenhand.local`): _Admin_ → the platform trail of logins, failed logins, tokens and rate-limit refusals, with addresses.
+6. **With curl**, as above: judge B asking for judge A's scores gets 403, before the database is even asked whether judge A exists.
+
 ## Acceptance report
 
 ```sh
@@ -86,9 +109,9 @@ Each claim below is checked by a command anyone can run, not asserted. Numbers a
 
 The REST API is described by an OpenAPI 3 document, [`src/api/openapi.json`](src/api/openapi.json), served with Swagger UI at <http://localhost:8080/api/docs> (works offline).
 
-## What works today, honestly
+## What is built
 
-Status on Mon 28 Sep (UTC). Claims only what is tested; "API" means the pages for it are still to come.
+Status on Mon 28 Sep (UTC). Each row is built and tested as its status says; nothing here is a plan.
 
 | Area                                                                                                                                                                                                                      | Status                                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -120,20 +143,21 @@ Status on Mon 28 Sep (UTC). Claims only what is tested; "API" means the pages fo
 
 ## Limitations
 
-Written down so a reviewer does not have to find them. Features still being built are in the table above; these are limits of the design as it stands.
+Written down so a reviewer does not have to find them. Everything in the table above is built; these are the limits of the design as it stands.
 
 - **No email.** Nothing is sent: team invite links are copied and shared by hand, and there is no password-reset email. An operator resets a password with `create-admin --reset-password` (below). Sending mail would mean an SMTP server, which the offline rule excludes from the default setup.
-- **No team-size limit per event.** Each invite link admits at most 4 people and expires after 7 days, but a team can issue more links. Leaving a team and removing a member are not built yet.
+- **Teams can only grow, until the deadline.** Each invite link admits at most 4 people and expires after 7 days, but a team can issue more links, and there is no team-size limit per event. Leaving a team, removing a member and revoking an invite link early are not built.
+- **A final review is final.** Neither the judge nor an organiser can reopen it; a judge who made a mistake tells the organisers, who can see it in the scores export and the audit trail.
 - **Exports carry submitted work only.** Drafts and unfinished reviews are not exported, and imported accounts have no password until an operator runs `cli reset-password`. There is no import through the web yet; it runs from the server shell.
 - **Demo mode is insecure on purpose.** With `DEMO_MODE=true` (the compose default) the four test tokens and the shared password are public, so the checker and a first-time visitor can get in. [Turn it off](#running-a-real-event) for a real event.
 - **No TLS in the box.** The portal serves plain HTTP on :8080. Put a reverse proxy that terminates TLS in front of it for anything beyond a laptop.
-- **Per-IP rate limits can be dodged behind the bundled proxy.** Next.js passes on a client-supplied `X-Forwarded-For`; a reverse proxy in front should overwrite it ([threat model](JUDGING.md#threat-model)).
+- **Per-IP rate limits can be dodged behind the bundled proxy.** Next.js passes on a client-supplied `X-Forwarded-For`; a reverse proxy in front should overwrite it ([threat model](JUDGING.md#threat-model)). Without one, the admin trail records the address the api sees, which on a laptop is Docker's internal network.
 - **One machine.** One Postgres, one API and one web container. Sized for a hackathon of hundreds of people, not a platform of many concurrent events.
 - **A database superuser can still rewrite history.** The audit log is append-only through triggers, which someone with superuser access can disable. Hash-chaining the log is not built.
 - **Images stay on the machine that received them.** They are not in the event export (the fixtures.json shape has no field for them); back up the `uploads` volume with the database. Uploads are re-encoded, so they are slightly compressed, and animated images are not accepted.
 - **Times are UTC.** Deadlines are stored and enforced in UTC by the server's clock; a client's clock is never trusted.
 
-The reasoning behind each design choice is in the [decision records](docs/decisions/).
+The reasoning behind each design choice, and the designs we rejected, are in [DECISIONS.md](DECISIONS.md).
 
 ## Running a real event
 
@@ -228,11 +252,13 @@ src/judging-engine  Pure TypeScript judging maths (no I/O), unit-tested on its o
 tests/              End-to-end (tests/api), browser (tests/ui), acceptance and offline drill
 data/fixtures.json  The organisers' fixture data, loaded on every boot
 docker/             Dockerfiles and the api entrypoint
+DECISIONS.md        Index of the decision records, and the designs we rejected
 docs/decisions/     Architecture decision records (one file per decision)
-docs/planning/      The pre-build plans this implementation follows
+docs/proof/         The Normalization Proof, generated from the fixtures and checked by a test
+docs/planning/      The plans written before the build, kept as they were
 ```
 
-Design: [ARCHITECTURE.md](ARCHITECTURE.md) · Schema, import and export: [DATA-MODEL.md](DATA-MODEL.md) · Scoring, normalization and threat model: [JUDGING.md](JUDGING.md)
+Design: [ARCHITECTURE.md](ARCHITECTURE.md) · Schema, import and export: [DATA-MODEL.md](DATA-MODEL.md) · Scoring, normalization and threat model: [JUDGING.md](JUDGING.md) · Decisions: [DECISIONS.md](DECISIONS.md)
 
 ## Troubleshooting
 
@@ -242,10 +268,12 @@ Design: [ARCHITECTURE.md](ARCHITECTURE.md) · Schema, import and export: [DATA-M
 | Old data or a failed migration after pulling changes | `docker compose down -v && docker compose up --build` (wipes the local database).                                                             |
 | `npm run dev` cannot reach Postgres                  | `npm run db:up`. Check that nothing else uses host port 5433.                                                                                 |
 | Changed code but Docker shows the old version        | `docker compose up --build`                                                                                                                   |
+| `npm run test:ui` fails with 429 on a second run     | The checks use 10 of the 10 logins allowed per minute per address. Wait a minute between runs.                                                |
+| Project images missing after a restore               | Images live in the `uploads` volume, not the database: restore it too ([Backup and restore](#backup-and-restore)).                            |
 
 ## AI use
 
-Built with Claude Code. The humans on the team own the design decisions in [docs/decisions](docs/decisions/) and [docs/planning](docs/planning/), review every change, and can defend the schema and the maths in writing. AI output is reviewed like any other code.
+Built with Claude Code. The humans on the team own the design decisions in [DECISIONS.md](DECISIONS.md) and [docs/planning](docs/planning/), review every change, and can defend the schema and the maths in writing. AI output is reviewed and tested like any other code.
 
 ## License
 
