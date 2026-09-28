@@ -3,7 +3,14 @@ import Link from 'next/link';
 import { Badge, Card, ProjectTile } from '@/components/ui';
 import type { Schemas } from '@/lib/api/types';
 
-export function ProjectCard({ project }: { project: Schemas['ProjectSummaryDto'] }) {
+export function ProjectCard({
+  project,
+  eventName,
+}: {
+  project: Schemas['ProjectSummaryDto'];
+  /** The project's event, so a visitor can tell events apart; omitted when not known. */
+  eventName?: string;
+}) {
   const ref = project.externalId ?? project.id;
   return (
     <Card className="relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-accent">
@@ -30,6 +37,7 @@ export function ProjectCard({ project }: { project: Schemas['ProjectSummaryDto']
             </Link>
           </h2>
           <p className="mt-0.5 truncate text-xs text-muted">Team {project.teamName}</p>
+          {eventName ? <p className="truncate text-xs text-muted">{eventName}</p> : null}
         </div>
       </div>
       <p className="mt-3 line-clamp-3 text-sm text-muted">

@@ -49,6 +49,8 @@ export default async function GalleryPage({ searchParams }: PageProps<'/projects
   }
 
   const pages = Math.max(1, Math.ceil(data.total / data.pageSize));
+  // Event names for the cards, from the list the filter already loaded (no extra request).
+  const eventNames = new Map(events.map((e) => [e.id, e.name]));
   const pageHref = (n: number): string => {
     const p = new URLSearchParams(query);
     p.set('page', String(n));
@@ -144,7 +146,7 @@ export default async function GalleryPage({ searchParams }: PageProps<'/projects
         <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.items.map((p) => (
             <li key={p.id}>
-              <ProjectCard project={p} />
+              <ProjectCard project={p} eventName={eventNames.get(p.eventId)} />
             </li>
           ))}
         </ul>
