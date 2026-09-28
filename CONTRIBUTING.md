@@ -58,7 +58,7 @@ The reference module is **`src/api/src/modules/gallery`** (controller → servic
 4. Every page handles loading, empty, error (showing the API's message) and success.
 5. The UI may hide what a role cannot do, but it is never the security boundary.
 6. Next.js 16 differs from older versions: read `node_modules/next/dist/docs/` before using an API you are unsure of (see `src/web/AGENTS.md`).
-7. No network at build or run time: no `next/font/google`, no CDN scripts, no remote images.
+7. No network at run time: no `next/font/google`, no CDN scripts, no remote images. Fonts come from npm (`@fontsource-variable/*`) and are imported in `app/layout.tsx`; a new one must be under an open licence.
 
 ## 5. Areas and hot files
 

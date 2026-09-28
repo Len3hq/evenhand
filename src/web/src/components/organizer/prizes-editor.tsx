@@ -77,7 +77,7 @@ export function PrizesEditor({
       id={id}
       name="track"
       defaultValue={value ?? OVERALL}
-      className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+      className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent"
     >
       <option value={OVERALL}>Overall (every track)</option>
       {tracks.map((t) => (

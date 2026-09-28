@@ -201,9 +201,8 @@ const statusOf = (path) => page.evaluate((p) => fetch(p).then((r) => r.status), 
 await step('confirm the planted duplicate, see where its reviews went, then undo it', async () => {
   await page.goto(`${BASE}/organizer/events/evt_01/entries`);
   await page.getByRole('heading', { name: 'Entries and duplicates' }).waitFor();
-  const card = page.locator('div.rounded-lg', {
-    has: page.locator('h3', { hasText: 'Dry Harbour' }),
-  });
+  // Found by role and name, not by styling, so a redesign cannot break the check.
+  const card = page.getByRole('article', { name: 'Dry Harbour' });
   await card.getByText('Waiting for your decision').waitFor();
   // jdg_01 and jdg_12 reviewed only the older copy; their reviews move across.
   await card.getByText(/Reviews that move to the newer copy.*: .+, .+\./).waitFor();

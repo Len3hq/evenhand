@@ -1,6 +1,9 @@
 /**
  * Design-system primitives (owner: C). Pages use these instead of styling raw elements, so
  * the whole portal looks like one product. Extend here; do not fork per page.
+ *
+ * The look: pill buttons, quiet cards on a faint grid, and the mono font for small technical
+ * text (badges, labels, figures). Colours only from the tokens in app/globals.css.
  */
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
 
@@ -15,12 +18,12 @@ export function Button({
   return (
     <button
       className={cx(
-        'inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium',
-        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-        'disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold',
+        'transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+        'disabled:cursor-not-allowed disabled:opacity-50',
         variant === 'primary'
           ? 'bg-accent text-accent-fg hover:opacity-90'
-          : 'border border-border bg-surface hover:bg-bg',
+          : 'border border-border bg-surface text-fg hover:border-accent',
         className,
       )}
       {...props}
@@ -32,8 +35,9 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return (
     <input
       className={cx(
-        'w-full rounded-md border border-border bg-surface px-3 py-2 text-sm',
-        'focus-visible:outline-2 focus-visible:outline-accent',
+        'w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg',
+        'placeholder:text-muted transition-colors hover:border-muted',
+        'focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent',
         className,
       )}
       {...props}
@@ -49,9 +53,23 @@ export function Label({ htmlFor, children }: { htmlFor: string; children: ReactN
   );
 }
 
+/**
+ * A small section label in the mono face, e.g. `[ Judging ]`. The brackets are decoration, so
+ * screen readers hear only the words. Use sparingly: one per page section at most.
+ */
+export function Eyebrow({ children }: { children: ReactNode }) {
+  return (
+    <p className="font-mono text-xs font-medium uppercase tracking-[0.18em] text-accent">
+      <span aria-hidden="true">[ </span>
+      {children}
+      <span aria-hidden="true"> ]</span>
+    </p>
+  );
+}
+
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cx('rounded-lg border border-border bg-surface p-4 shadow-sm', className)}>
+    <div className={cx('rounded-xl border border-border bg-surface p-4 shadow-sm', className)}>
       {children}
     </div>
   );
@@ -72,7 +90,12 @@ export function Badge({
   tone?: keyof typeof BADGE_TONES;
 }) {
   return (
-    <span className={cx('inline-block rounded-full border px-2 py-0.5 text-xs', BADGE_TONES[tone])}>
+    <span
+      className={cx(
+        'inline-block rounded-full border px-2 py-0.5 font-mono text-[11px] leading-4',
+        BADGE_TONES[tone],
+      )}
+    >
       {children}
     </span>
   );

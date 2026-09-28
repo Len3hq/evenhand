@@ -10,7 +10,8 @@ import type { Schemas } from '@/lib/api/types';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Gallery' };
 
-const select = 'rounded-md border border-border bg-surface px-3 py-2 text-sm';
+const select =
+  'rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent';
 
 const first = (v: string | string[] | undefined): string | undefined =>
   Array.isArray(v) ? v[0] : v;

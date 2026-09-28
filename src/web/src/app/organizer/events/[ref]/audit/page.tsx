@@ -97,7 +97,7 @@ export default async function AuditPage({
             id="action"
             name="action"
             defaultValue={action}
-            className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
+            className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent"
           >
             {GROUPS.map(([value, label]) => (
               <option key={value} value={value}>

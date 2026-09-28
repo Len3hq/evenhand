@@ -2,6 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { UserNav } from '@/components/nav/user-nav';
 import { currentUser } from '@/lib/session';
+// Bundled fonts (SIL OFL 1.1): installed with npm and served from the portal's own origin, never
+// fetched from a font service. Each stylesheet declares its files by character set, so a browser
+// downloads only the ones a page needs.
+import '@fontsource-variable/inter';
+import '@fontsource-variable/manrope';
+import '@fontsource-variable/jetbrains-mono';
 import './globals.css';
 
 export const metadata: Metadata = {

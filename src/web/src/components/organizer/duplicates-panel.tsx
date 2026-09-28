@@ -51,96 +51,101 @@ export function DuplicatesPanel({ duplicates }: { duplicates: Duplicate[] }) {
     <div className="space-y-4">
       {error ? <ErrorState title="Not done" message={error} /> : null}
       {duplicates.map((d) => (
-        <Card key={d.id}>
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-semibold">{d.kept.title}</h3>
-            <Badge>{REASONS[d.reason]}</Badge>
-            <Badge tone={d.status === 'PENDING' ? 'warning' : 'neutral'}>
-              {d.status === 'PENDING'
-                ? 'Waiting for your decision'
-                : d.status === 'CONFIRMED'
-                  ? 'Confirmed'
-                  : 'Dismissed'}
-            </Badge>
-          </div>
-
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <Side heading="Older copy" entry={d.superseded} />
-            <Side heading="Newer copy (kept if confirmed)" entry={d.kept} />
-          </div>
-
-          {d.status !== 'DISMISSED' ? (
-            <div className="mt-3 text-sm">
-              <p className="font-medium">
-                {d.status === 'PENDING' ? 'If you confirm:' : 'What confirming did:'}
-              </p>
-              <ul className="mt-1 list-disc pl-5 text-muted">
-                <li>
-                  The older copy leaves the gallery and judging. Reviews that move to the newer copy
-                  (the judge reviewed only the older one): {list(d.merge.moved)}.
-                </li>
-                <li>
-                  Reviews set aside so nobody counts twice (the judge reviewed both):{' '}
-                  {list(d.merge.setAside)}.
-                </li>
-              </ul>
+        // An article named by its heading, so each decision is one landmark for screen readers.
+        <article key={d.id} aria-labelledby={`duplicate-${d.id}`}>
+          <Card>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 id={`duplicate-${d.id}`} className="font-semibold">
+                {d.kept.title}
+              </h3>
+              <Badge>{REASONS[d.reason]}</Badge>
+              <Badge tone={d.status === 'PENDING' ? 'warning' : 'neutral'}>
+                {d.status === 'PENDING'
+                  ? 'Waiting for your decision'
+                  : d.status === 'CONFIRMED'
+                    ? 'Confirmed'
+                    : 'Dismissed'}
+              </Badge>
             </div>
-          ) : null}
 
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            {d.status === 'PENDING' ? (
-              <>
-                <Button
-                  type="button"
-                  disabled={busy !== null || d.blockedBy !== null}
-                  onClick={() =>
-                    act(
-                      d.id,
-                      'confirm',
-                      `Keep “${d.kept.title}” and replace the older copy? Its reviews move as listed.`,
-                    )
-                  }
-                >
-                  Confirm: keep the newer copy
-                </Button>
-                {d.reason !== 'SAME_TEAM' ? (
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <Side heading="Older copy" entry={d.superseded} />
+              <Side heading="Newer copy (kept if confirmed)" entry={d.kept} />
+            </div>
+
+            {d.status !== 'DISMISSED' ? (
+              <div className="mt-3 text-sm">
+                <p className="font-medium">
+                  {d.status === 'PENDING' ? 'If you confirm:' : 'What confirming did:'}
+                </p>
+                <ul className="mt-1 list-disc pl-5 text-muted">
+                  <li>
+                    The older copy leaves the gallery and judging. Reviews that move to the newer
+                    copy (the judge reviewed only the older one): {list(d.merge.moved)}.
+                  </li>
+                  <li>
+                    Reviews set aside so nobody counts twice (the judge reviewed both):{' '}
+                    {list(d.merge.setAside)}.
+                  </li>
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              {d.status === 'PENDING' ? (
+                <>
+                  <Button
+                    type="button"
+                    disabled={busy !== null || d.blockedBy !== null}
+                    onClick={() =>
+                      act(
+                        d.id,
+                        'confirm',
+                        `Keep “${d.kept.title}” and replace the older copy? Its reviews move as listed.`,
+                      )
+                    }
+                  >
+                    Confirm: keep the newer copy
+                  </Button>
+                  {d.reason !== 'SAME_TEAM' ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={busy !== null}
+                      onClick={() =>
+                        act(d.id, 'dismiss', 'These are different projects: keep both in judging?')
+                      }
+                    >
+                      Not a duplicate
+                    </Button>
+                  ) : (
+                    <span className="text-sm text-muted">
+                      One team&apos;s two entries cannot both stay: a team has one live entry.
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="text-sm text-muted">
+                    {d.status === 'CONFIRMED' ? 'Confirmed' : 'Dismissed'} by{' '}
+                    {d.decidedBy ?? 'someone'} {formatUtc(d.decidedAt)}.
+                  </span>
                   <Button
                     type="button"
                     variant="secondary"
                     disabled={busy !== null}
                     onClick={() =>
-                      act(d.id, 'dismiss', 'These are different projects: keep both in judging?')
+                      act(d.id, 'reopen', 'Undo this decision? Everything goes back as it was.')
                     }
                   >
-                    Not a duplicate
+                    Undo
                   </Button>
-                ) : (
-                  <span className="text-sm text-muted">
-                    One team&apos;s two entries cannot both stay: a team has one live entry.
-                  </span>
-                )}
-              </>
-            ) : (
-              <>
-                <span className="text-sm text-muted">
-                  {d.status === 'CONFIRMED' ? 'Confirmed' : 'Dismissed'} by{' '}
-                  {d.decidedBy ?? 'someone'} {formatUtc(d.decidedAt)}.
-                </span>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={busy !== null}
-                  onClick={() =>
-                    act(d.id, 'reopen', 'Undo this decision? Everything goes back as it was.')
-                  }
-                >
-                  Undo
-                </Button>
-              </>
-            )}
-          </div>
-          {d.blockedBy ? <p className="mt-2 text-sm text-warning">{d.blockedBy}</p> : null}
-        </Card>
+                </>
+              )}
+            </div>
+            {d.blockedBy ? <p className="mt-2 text-sm text-warning">{d.blockedBy}</p> : null}
+          </Card>
+        </article>
       ))}
     </div>
   );

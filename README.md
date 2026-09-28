@@ -277,4 +277,4 @@ Built with Claude Code. The humans on the team own the design decisions in [DECI
 
 ## License
 
-[MIT](LICENSE). Image processing uses [sharp](https://sharp.pixelplumbing.com) (Apache-2.0), which bundles libvips (LGPL-3.0-or-later), used unmodified as a separate library.
+[MIT](LICENSE). Image processing uses [sharp](https://sharp.pixelplumbing.com) (Apache-2.0), which bundles libvips (LGPL-3.0-or-later), used unmodified as a separate library. The bundled fonts, Inter, Manrope and JetBrains Mono, are under the SIL Open Font License 1.1.

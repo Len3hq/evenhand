@@ -9,7 +9,7 @@ import type { Schemas } from '@/lib/api/types';
 type Submission = Schemas['SubmissionDto'];
 
 const textarea =
-  'w-full rounded-md border border-border bg-surface px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-accent';
+  'w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-2 focus-visible:outline-accent';
 
 /**
  * The team's submission. Save keeps it as it is (a draft, or the submitted entry); Submit saves
@@ -172,7 +172,7 @@ export function SubmissionForm({
               id="track"
               name="track"
               defaultValue={submission.trackId ?? ''}
-              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent"
             >
               <option value="">No track</option>
               {tracks.map((t) => (

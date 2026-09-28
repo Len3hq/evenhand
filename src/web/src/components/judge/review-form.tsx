@@ -217,7 +217,7 @@ export function ReviewForm({ review }: { review: Review }) {
           disabled={readOnly}
           value={comment}
           onChange={(e) => change({ comment: e.target.value })}
-          className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+          className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent"
         />
       </div>
 
