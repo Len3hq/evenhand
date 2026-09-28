@@ -10,6 +10,7 @@ import { PrismaService } from '../../core/prisma.service.js';
 import { eventByRef, isUuid } from '../../core/refs.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { manageableEvent } from '../events/manageable-event.js';
+import { IN_JUDGING } from '../judging/in-judging.js';
 import type {
   PublicResultsDto,
   RankingDto,
@@ -22,14 +23,6 @@ export const METHOD = 'joint-ridge-v1';
 /** Fewer final reviews than this and a project is listed, never ranked (decision 54). */
 const MIN_REVIEWS_TO_RANK = 2;
 const NOTABLE = 0.05;
-
-/** Projects in judging: submitted, eligible, not a held or replaced duplicate copy. */
-const JUDGED = {
-  status: 'SUBMITTED',
-  eligibility: 'ELIGIBLE',
-  supersededById: null,
-  duplicateHold: false,
-} as const;
 
 interface Inputs {
   criteria: { key: string; weight: number; min: number; max: number }[];
@@ -77,7 +70,7 @@ export class RankingsService {
 
     const fit = normalize(scored);
     const projects = await this.prisma.submission.findMany({
-      where: { eventId: event.id, ...JUDGED },
+      where: { eventId: event.id, ...IN_JUDGING },
       select: { id: true, submittedAt: true },
     });
     const submittedAt = new Map(projects.map((p) => [p.id, p.submittedAt?.getTime() ?? 0]));
@@ -328,7 +321,7 @@ export class RankingsService {
         where: {
           status: 'FINAL',
           superseded: false,
-          assignment: { submission: { eventId, ...JUDGED } },
+          assignment: { submission: { eventId, ...IN_JUDGING } },
         },
         include: {
           assignment: { select: { judgeRoleId: true, submissionId: true } },

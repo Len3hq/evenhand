@@ -5,6 +5,7 @@ import { Clock } from '../../core/clock.js';
 import { PrismaService } from '../../core/prisma.service.js';
 import { manageableEvent } from '../events/manageable-event.js';
 import type { ProgressDto } from './dto/progress.dto.js';
+import { IN_JUDGING } from './in-judging.js';
 
 /**
  * The organiser's live view of judging (T2 "a live organizer progress dashboard"): who has not
@@ -27,7 +28,7 @@ export class ProgressService {
           user: { select: { name: true, email: true } },
           judgeTracks: { include: { track: { select: { name: true } } } },
           assignments: {
-            where: { submission: JUDGED },
+            where: { submission: IN_JUDGING },
             include: {
               review: {
                 select: {
@@ -42,7 +43,7 @@ export class ProgressService {
         orderBy: [{ externalId: 'asc' }, { createdAt: 'asc' }],
       }),
       this.prisma.submission.findMany({
-        where: { eventId: event.id, ...JUDGED },
+        where: { eventId: event.id, ...IN_JUDGING },
         include: {
           track: { select: { name: true } },
           assignments: { include: { review: { select: { status: true } } } },
@@ -104,11 +105,3 @@ export class ProgressService {
     };
   }
 }
-
-/** Projects in judging: submitted, eligible, not a held or replaced duplicate copy. */
-const JUDGED = {
-  status: 'SUBMITTED',
-  eligibility: 'ELIGIBLE',
-  supersededById: null,
-  duplicateHold: false,
-} as const;

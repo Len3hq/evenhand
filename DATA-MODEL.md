@@ -64,7 +64,16 @@ On import:
 2. The earlier copy gets `duplicate_hold = true`, which takes it out of the one-live-per-team index while the decision is pending.
 3. A `duplicate_flags` row (SAME_TEAM, PENDING, kept = `prj_41`) is created and audited.
 
-Confirming (B, next) sets `prj_07.superseded_by_id = prj_41`, moves the reviews unique to `prj_07` across (recording `original_submission_id`), and marks the overlapping judges' reviews on `prj_07` as `superseded`, so no judge is counted twice and jdg_01's only score survives.
+The organiser decides on `/organizer/events/:event/entries` (`POST /api/duplicates/:id/confirm | dismiss | reopen`), which shows beforehand exactly whose reviews move and whose are set aside ([ADR](docs/decisions/20260928-0812-a-duplicate-decisions-and-disqualification.md)):
+
+- **Confirm** sets `prj_07.superseded_by_id = prj_41` and clears the hold. Reviews by judges who reviewed only `prj_07` (jdg_01, jdg_12) move across: their assignment now points at `prj_41` and the review records `original_submission_id`. Reviews by judges who reviewed both (jdg_19, 21, 26) stay on `prj_07` as `superseded`. Result: `prj_41` has 6 counted reviews, no judge counts twice, and jdg_01's only score survives.
+- **Dismiss** (different projects) is refused for one team's two entries: a team has one live entry.
+- **Reopen** reverses either decision from those two markers, row for row (tested against a snapshot of every assignment and review).
+- Confirming is refused when an entry already took part in another confirmed decision, so every decision can be undone on its own.
+
+## Eligibility
+
+`submissions.eligibility` (ELIGIBLE / DISQUALIFIED) and `disqualify_reason` are set by the event's organisers (`POST /api/submissions/:ref/disqualify` with a reason, `.../reinstate`). A disqualified entry keeps its data and reviews but leaves the gallery, assignment, the judge console, progress and rankings, which all read one definition of "in judging" (`modules/judging/in-judging.ts`: submitted, eligible, not held, not replaced). Its team sees the reason on its submission page.
 
 ## Fixture import
 

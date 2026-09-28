@@ -50,6 +50,41 @@ describe('audit summaries', () => {
     expect(text).toContain('…');
   });
 
+  it('says what a duplicate decision did to the reviews', () => {
+    expect(
+      summarise(
+        {
+          action: 'duplicate.confirmed',
+          before: { status: 'PENDING' },
+          after: {
+            kept: 'prj_41 Dry Harbour',
+            superseded: 'prj_07 Dry Harbour',
+            moved: ['Ada', 'Ben'],
+            setAside: [],
+          },
+        },
+        'Organizer',
+        null,
+      ),
+    ).toBe(
+      'Organizer confirmed a duplicate: kept prj_41 Dry Harbour, replaced prj_07 Dry Harbour; reviews moved across: Ada, Ben; set aside (judge reviewed both): none',
+    );
+  });
+
+  it('gives the reason for a disqualification', () => {
+    expect(
+      summarise(
+        {
+          action: 'submission.disqualified',
+          before: null,
+          after: { reason: 'Built before kickoff' },
+        },
+        'Organizer',
+        'Dry Harbour',
+      ),
+    ).toBe('Organizer disqualified "Dry Harbour": Built before kickoff');
+  });
+
   it('names an API token by its label, never by its secret', () => {
     expect(
       summarise(

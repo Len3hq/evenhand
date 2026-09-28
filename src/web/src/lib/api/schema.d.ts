@@ -130,7 +130,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Every submitted entry with where it stands (in judging, held, replaced, disqualified). */
+        get: operations["IntegrityController_entries"];
         put?: never;
         /**
          * Create your team's draft. Refused with 403 `submissions_closed` once the event's
@@ -898,6 +899,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events/{eventRef}/duplicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Suspected duplicates, with what confirming would do (or did) to their reviews. */
+        get: operations["IntegrityController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/duplicates/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Keep the newer entry: the older one is replaced, its unique reviews move across and the
+         *     reviews of judges who scored both are set aside. 409 `duplicate_decided` when not pending,
+         *     `duplicate_chain` when an entry is part of another confirmed duplicate.
+         */
+        post: operations["IntegrityController_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/duplicates/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Not a duplicate: both entries stay. 409 `duplicate_same_team` for one team's two entries. */
+        post: operations["IntegrityController_dismiss"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/duplicates/{id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Undo a confirmation or dismissal exactly; the duplicate is pending again. */
+        post: operations["IntegrityController_reopen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/submissions/{ref}/disqualify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Take a submitted entry out of the gallery, judging and rankings, with a reason for the team. */
+        post: operations["IntegrityController_disqualify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/submissions/{ref}/reinstate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Undo a disqualification. */
+        post: operations["IntegrityController_reinstate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1011,6 +1118,17 @@ export interface components {
             status: "DRAFT" | "SUBMITTED";
             /** @description When it was first submitted. */
             submittedAt: string | null;
+            /**
+             * @description DISQUALIFIED by the organisers: out of the gallery, judging and rankings.
+             * @enum {string}
+             */
+            eligibility: "ELIGIBLE" | "DISQUALIFIED";
+            /** @description The organisers' reason; null unless disqualified. */
+            disqualifyReason: string | null;
+            /** @description The team's newer entry that replaced this one as a confirmed duplicate, if any. */
+            supersededById: string | null;
+            /** @description The older copy of a suspected duplicate, waiting for the organisers' decision. */
+            duplicateHold: boolean;
             createdAt: string;
             updatedAt: string;
         };
@@ -1177,12 +1295,18 @@ export interface components {
             assignmentId: string;
             eventId: string;
             eventName: string;
+            /** @description Place in the queue from 0; -1 when the project is no longer in judging. */
             position: number;
-            /** @description Assignments in this judge's queue for the event. */
+            /** @description Assignments in this judge's queue for the event (projects still in judging). */
             queueLength: number;
             previousAssignmentId: string | null;
             nextAssignmentId: string | null;
             judgingOpen: boolean;
+            /**
+             * @description False once the project was disqualified or replaced by a newer copy: the review can be
+             *     read but not changed (409 `not_in_judging`).
+             */
+            inJudging: boolean;
             project: components["schemas"]["ReviewProjectDto"];
             criteria: components["schemas"]["ReviewCriterionDto"][];
             /** @enum {string} */
@@ -1578,6 +1702,54 @@ export interface components {
             tieGroups: number;
             rows: components["schemas"]["RankingRowDto"][];
         };
+        EntryDto: {
+            id: string;
+            /** @description Fixture id (e.g. prj_07) when imported from fixtures.json. */
+            externalId: string | null;
+            title: string;
+            teamName: string;
+            track: string | null;
+            repoUrl: string | null;
+            submittedAt: string | null;
+            /** @enum {string} */
+            state: "DISQUALIFIED" | "IN_JUDGING" | "HELD" | "REPLACED";
+            /** @description Why it was disqualified; null unless disqualified. */
+            disqualifyReason: string | null;
+            /** @description Final reviews that count (reviews set aside by a duplicate merge are not counted). */
+            finalReviews: number;
+        };
+        DuplicateMergeDto: {
+            /** @description Judges who reviewed only the older copy: their reviews move to the kept entry. */
+            moved: string[];
+            /** @description Judges who reviewed both copies: their review of the older copy no longer counts. */
+            setAside: string[];
+        };
+        DuplicateDto: {
+            id: string;
+            eventId: string;
+            /**
+             * @description SAME_TEAM: one team submitted twice. SAME_REPO / SAME_TITLE: two teams, one project?
+             * @enum {string}
+             */
+            reason: "SAME_TEAM" | "SAME_REPO" | "SAME_TITLE";
+            /** @enum {string} */
+            status: "PENDING" | "CONFIRMED" | "DISMISSED";
+            /** @description The newer copy, kept when the duplicate is confirmed. */
+            kept: components["schemas"]["EntryDto"];
+            /** @description The older copy, replaced when the duplicate is confirmed. */
+            superseded: components["schemas"]["EntryDto"];
+            /** @description Pending: what confirming would do. Confirmed: what it did. Dismissed: nothing. */
+            merge: components["schemas"]["DuplicateMergeDto"];
+            /** @description Confirming or dismissing this is refused, and why (null when it is allowed). */
+            blockedBy: string | null;
+            decidedBy: string | null;
+            decidedAt: string | null;
+            createdAt: string;
+        };
+        DisqualifyDto: {
+            /** @description Shown to the team and recorded in the audit trail. */
+            reason: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -1731,6 +1903,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectDetailDto"];
+                };
+            };
+        };
+    };
+    IntegrityController_entries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryDto"][];
                 };
             };
         };
@@ -2937,6 +3131,139 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    IntegrityController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                eventRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicateDto"][];
+                };
+            };
+        };
+    };
+    IntegrityController_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicateDto"];
+                };
+            };
+        };
+    };
+    IntegrityController_dismiss: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicateDto"];
+                };
+            };
+        };
+    };
+    IntegrityController_reopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicateDto"];
+                };
+            };
+        };
+    };
+    IntegrityController_disqualify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Submission id or fixture id (prj_07). */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DisqualifyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryDto"];
+                };
+            };
+        };
+    };
+    IntegrityController_reinstate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Submission id or fixture id (prj_07). */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryDto"];
+                };
             };
         };
     };

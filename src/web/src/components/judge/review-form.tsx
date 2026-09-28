@@ -25,7 +25,7 @@ export function ReviewForm({ review }: { review: Review }) {
   const [submitting, setSubmitting] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef({ values, comment });
-  const readOnly = review.state === 'FINAL' || !review.judgingOpen;
+  const readOnly = review.state === 'FINAL' || !review.judgingOpen || !review.inJudging;
 
   async function flush(): Promise<boolean> {
     if (timer.current) clearTimeout(timer.current);
@@ -89,9 +89,11 @@ export function ReviewForm({ review }: { review: Review }) {
         <span className="font-medium">
           {review.state === 'FINAL'
             ? 'Submitted'
-            : review.judgingOpen
-              ? 'Your marks'
-              : 'Judging closed'}
+            : !review.inJudging
+              ? 'No longer in judging'
+              : review.judgingOpen
+                ? 'Your marks'
+                : 'Judging closed'}
         </span>
         <span className="text-muted" role="status">
           {saving === 'saving' ? 'Saving…' : saving === 'saved' ? 'Draft saved' : ''}

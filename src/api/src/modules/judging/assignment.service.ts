@@ -8,6 +8,7 @@ import { DomainError } from '../../core/errors.js';
 import { PrismaService } from '../../core/prisma.service.js';
 import { manageableEvent } from '../events/manageable-event.js';
 import type { AssignmentRunDto, RunAssignmentDto } from './dto/assignment.dto.js';
+import { IN_JUDGING } from './in-judging.js';
 
 /**
  * Runs the engine's assignment (judging-engine/src/assign.ts) for an event and stores the result
@@ -42,13 +43,7 @@ export class AssignmentService {
     return this.prisma.$transaction(async (tx) => {
       const [submissions, judges, existing, declared] = await Promise.all([
         tx.submission.findMany({
-          where: {
-            eventId: event.id,
-            status: 'SUBMITTED',
-            eligibility: 'ELIGIBLE',
-            supersededById: null,
-            duplicateHold: false,
-          },
+          where: { eventId: event.id, ...IN_JUDGING },
           select: { id: true, title: true, trackId: true, teamId: true },
         }),
         tx.eventRole.findMany({

@@ -76,6 +76,10 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
             Judging progress
           </Link>{' '}
           ·{' '}
+          <Link href={`/organizer/events/${event.slug}/entries`} className="underline">
+            Entries and duplicates
+          </Link>{' '}
+          ·{' '}
           <Link href={`/organizer/events/${event.slug}/results`} className="underline">
             Results
           </Link>{' '}

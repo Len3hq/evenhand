@@ -6,8 +6,9 @@ import { Clock } from '../../core/clock.js';
 import { DomainError, forbidden } from '../../core/errors.js';
 import { PrismaService } from '../../core/prisma.service.js';
 import { isUuid } from '../../core/refs.js';
-import type { Criterion, Event } from '../../generated/prisma/client.js';
+import type { Criterion, Event, Submission } from '../../generated/prisma/client.js';
 import type { JudgeQueueDto, ReviewDto, ReviewState, SaveReviewDto } from './dto/review.dto.js';
+import { IN_JUDGING } from './in-judging.js';
 
 /**
  * The judge console (T2). A judge reaches only their own assignments: every lookup is "this
@@ -25,7 +26,9 @@ export class ReviewsService {
   /** The caller's assignments in every event they judge, in queue order. */
   async queue(actor: Actor): Promise<JudgeQueueDto> {
     const rows = await this.prisma.assignment.findMany({
-      where: { judgeRole: { userId: actor.userId, role: 'JUDGE' } },
+      // Only projects still in judging: a disqualified entry or a replaced or held duplicate
+      // copy leaves the queue (its reviews stay on record).
+      where: { judgeRole: { userId: actor.userId, role: 'JUDGE' }, submission: IN_JUDGING },
       include: {
         review: { select: { status: true } },
         submission: { select: { id: true, title: true, track: { select: { name: true } } } },
@@ -78,6 +81,7 @@ export class ReviewsService {
     const a = await this.ownAssignment(actor, assignmentId);
     this.assertOpen(a.judgeRole.event);
     if (a.review?.status === 'FINAL') throw finalAlready();
+    assertInJudging(a.submission);
     const criteria = await this.criteriaOf(a.judgeRole.eventId);
     const marks = checkMarks(criteria, dto.values);
 
@@ -118,6 +122,7 @@ export class ReviewsService {
     const a = await this.ownAssignment(actor, assignmentId);
     if (a.review?.status === 'FINAL') return this.present(a.id);
     this.assertOpen(a.judgeRole.event);
+    assertInJudging(a.submission);
     const criteria = await this.criteriaOf(a.judgeRole.eventId);
     const values = marksByKey(criteria, a.review?.scores ?? []);
     const missing = criteria.filter((c) => values[c.key] === undefined).map((c) => c.label);
@@ -154,6 +159,7 @@ export class ReviewsService {
           include: {
             review: { include: { scores: true } },
             judgeRole: { include: { event: true } },
+            submission: true,
           },
         })
       : null;
@@ -172,7 +178,7 @@ export class ReviewsService {
     });
     const criteria = await this.criteriaOf(a.judgeRole.eventId);
     const queue = await this.prisma.assignment.findMany({
-      where: { judgeRoleId: a.judgeRoleId },
+      where: { judgeRoleId: a.judgeRoleId, submission: IN_JUDGING },
       select: { id: true },
       orderBy: [{ queuePosition: 'asc' }, { assignedAt: 'asc' }, { id: 'asc' }],
     });
@@ -192,9 +198,11 @@ export class ReviewsService {
       eventName: a.judgeRole.event.name,
       position: at,
       queueLength: queue.length,
-      previousAssignmentId: queue[at - 1]?.id ?? null,
+      // A project withdrawn from judging is not in the queue (at = -1): "next" is its start.
+      previousAssignmentId: at > 0 ? queue[at - 1]!.id : null,
       nextAssignmentId: queue[at + 1]?.id ?? null,
       judgingOpen: judgingOpen(a.judgeRole.event, this.clock.now()),
+      inJudging: isInJudging(s),
       project: {
         id: s.id,
         title: s.title,
@@ -238,6 +246,23 @@ export class ReviewsService {
         `Judging closed at ${event.judgingClose!.toISOString()}.`,
       );
     }
+  }
+}
+
+const isInJudging = (s: Submission): boolean =>
+  s.status === IN_JUDGING.status &&
+  s.eligibility === IN_JUDGING.eligibility &&
+  s.supersededById === IN_JUDGING.supersededById &&
+  s.duplicateHold === IN_JUDGING.duplicateHold;
+
+/** A project disqualified or replaced after it was assigned takes no more reviews. */
+function assertInJudging(s: Submission): void {
+  if (!isInJudging(s)) {
+    throw new DomainError(
+      HttpStatus.CONFLICT,
+      'not_in_judging',
+      'This project is no longer in judging (disqualified, or replaced by a newer copy).',
+    );
   }
 }
 

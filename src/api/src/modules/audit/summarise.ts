@@ -77,6 +77,16 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
       return `${who} submitted ${it}`;
     case 'duplicate.flagged':
       return `${who} flagged a suspected duplicate: ${str(after.superseded)} and ${str(after.kept)} (${str(after.reason)})`;
+    case 'duplicate.confirmed':
+      return `${who} confirmed a duplicate: kept ${str(after.kept)}, replaced ${str(after.superseded)}; reviews moved across: ${names(after.moved)}; set aside (judge reviewed both): ${names(after.setAside)}`;
+    case 'duplicate.dismissed':
+      return `${who} dismissed a suspected duplicate: ${str(after.superseded)} and ${str(after.kept)} are different projects`;
+    case 'duplicate.reopened':
+      return `${who} reopened the duplicate ${str(after.superseded)} / ${str(after.kept)}; it is pending again`;
+    case 'submission.disqualified':
+      return `${who} disqualified ${it}: ${str(after.reason)}`;
+    case 'submission.reinstated':
+      return `${who} reinstated ${it}`;
     case 'fixtures.imported':
       return `${who} imported the event from fixtures.json`;
     case 'demo.seeded':
@@ -167,3 +177,8 @@ const str = (v: unknown): string => (typeof v === 'string' ? v : String(v ?? '?'
 
 const asRecord = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+
+/** "Ada, Ben", or "none". */
+function names(v: unknown): string {
+  return Array.isArray(v) && v.length ? v.map(String).join(', ') : 'none';
+}

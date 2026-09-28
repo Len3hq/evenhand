@@ -249,6 +249,39 @@
         "tags": [
           "submissions"
         ]
+      },
+      "get": {
+        "operationId": "IntegrityController_entries",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EntryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Every submitted entry with where it stands (in judging, held, replaced, disqualified).",
+        "tags": [
+          "integrity"
+        ]
       }
     },
     "/api/submissions/{ref}": {
@@ -2025,6 +2058,208 @@
           "rankings"
         ]
       }
+    },
+    "/api/events/{eventRef}/duplicates": {
+      "get": {
+        "operationId": "IntegrityController_list",
+        "parameters": [
+          {
+            "name": "eventRef",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DuplicateDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Suspected duplicates, with what confirming would do (or did) to their reviews.",
+        "tags": [
+          "integrity"
+        ]
+      }
+    },
+    "/api/duplicates/{id}/confirm": {
+      "post": {
+        "operationId": "IntegrityController_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DuplicateDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Keep the newer entry: the older one is replaced, its unique reviews move across and the\nreviews of judges who scored both are set aside. 409 `duplicate_decided` when not pending,\n`duplicate_chain` when an entry is part of another confirmed duplicate.",
+        "tags": [
+          "integrity"
+        ]
+      }
+    },
+    "/api/duplicates/{id}/dismiss": {
+      "post": {
+        "operationId": "IntegrityController_dismiss",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DuplicateDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Not a duplicate: both entries stay. 409 `duplicate_same_team` for one team's two entries.",
+        "tags": [
+          "integrity"
+        ]
+      }
+    },
+    "/api/duplicates/{id}/reopen": {
+      "post": {
+        "operationId": "IntegrityController_reopen",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DuplicateDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Undo a confirmation or dismissal exactly; the duplicate is pending again.",
+        "tags": [
+          "integrity"
+        ]
+      }
+    },
+    "/api/submissions/{ref}/disqualify": {
+      "post": {
+        "operationId": "IntegrityController_disqualify",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Submission id or fixture id (prj_07).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisqualifyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Take a submitted entry out of the gallery, judging and rankings, with a reason for the team.",
+        "tags": [
+          "integrity"
+        ]
+      }
+    },
+    "/api/submissions/{ref}/reinstate": {
+      "post": {
+        "operationId": "IntegrityController_reinstate",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Submission id or fixture id (prj_07).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Undo a disqualification.",
+        "tags": [
+          "integrity"
+        ]
+      }
     }
   },
   "info": {
@@ -2475,6 +2710,28 @@
             "nullable": true,
             "description": "When it was first submitted."
           },
+          "eligibility": {
+            "description": "DISQUALIFIED by the organisers: out of the gallery, judging and rankings.",
+            "enum": [
+              "ELIGIBLE",
+              "DISQUALIFIED"
+            ],
+            "type": "string"
+          },
+          "disqualifyReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "The organisers' reason; null unless disqualified."
+          },
+          "supersededById": {
+            "type": "string",
+            "nullable": true,
+            "description": "The team's newer entry that replaced this one as a confirmed duplicate, if any."
+          },
+          "duplicateHold": {
+            "type": "boolean",
+            "description": "The older copy of a suspected duplicate, waiting for the organisers' decision."
+          },
           "createdAt": {
             "type": "string"
           },
@@ -2498,6 +2755,10 @@
           "techTags",
           "status",
           "submittedAt",
+          "eligibility",
+          "disqualifyReason",
+          "supersededById",
+          "duplicateHold",
           "createdAt",
           "updatedAt"
         ]
@@ -3087,11 +3348,12 @@
             "type": "string"
           },
           "position": {
-            "type": "number"
+            "type": "number",
+            "description": "Place in the queue from 0; -1 when the project is no longer in judging."
           },
           "queueLength": {
             "type": "number",
-            "description": "Assignments in this judge's queue for the event."
+            "description": "Assignments in this judge's queue for the event (projects still in judging)."
           },
           "previousAssignmentId": {
             "type": "string",
@@ -3103,6 +3365,10 @@
           },
           "judgingOpen": {
             "type": "boolean"
+          },
+          "inJudging": {
+            "type": "boolean",
+            "description": "False once the project was disqualified or replaced by a newer copy: the review can be\nread but not changed (409 `not_in_judging`)."
           },
           "project": {
             "$ref": "#/components/schemas/ReviewProjectDto"
@@ -3149,6 +3415,7 @@
           "previousAssignmentId",
           "nextAssignmentId",
           "judgingOpen",
+          "inJudging",
           "project",
           "criteria",
           "state",
@@ -4546,6 +4813,185 @@
           "outputHash",
           "tieGroups",
           "rows"
+        ]
+      },
+      "EntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Fixture id (e.g. prj_07) when imported from fixtures.json."
+          },
+          "title": {
+            "type": "string"
+          },
+          "teamName": {
+            "type": "string"
+          },
+          "track": {
+            "type": "string",
+            "nullable": true
+          },
+          "repoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "state": {
+            "enum": [
+              "DISQUALIFIED",
+              "IN_JUDGING",
+              "HELD",
+              "REPLACED"
+            ],
+            "type": "string"
+          },
+          "disqualifyReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Why it was disqualified; null unless disqualified."
+          },
+          "finalReviews": {
+            "type": "number",
+            "description": "Final reviews that count (reviews set aside by a duplicate merge are not counted)."
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "title",
+          "teamName",
+          "track",
+          "repoUrl",
+          "submittedAt",
+          "state",
+          "disqualifyReason",
+          "finalReviews"
+        ]
+      },
+      "DuplicateMergeDto": {
+        "type": "object",
+        "properties": {
+          "moved": {
+            "description": "Judges who reviewed only the older copy: their reviews move to the kept entry.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "setAside": {
+            "description": "Judges who reviewed both copies: their review of the older copy no longer counts.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "moved",
+          "setAside"
+        ]
+      },
+      "DuplicateDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "reason": {
+            "description": "SAME_TEAM: one team submitted twice. SAME_REPO / SAME_TITLE: two teams, one project?",
+            "enum": [
+              "SAME_TEAM",
+              "SAME_REPO",
+              "SAME_TITLE"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "DISMISSED"
+            ],
+            "type": "string"
+          },
+          "kept": {
+            "description": "The newer copy, kept when the duplicate is confirmed.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EntryDto"
+              }
+            ]
+          },
+          "superseded": {
+            "description": "The older copy, replaced when the duplicate is confirmed.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EntryDto"
+              }
+            ]
+          },
+          "merge": {
+            "description": "Pending: what confirming would do. Confirmed: what it did. Dismissed: nothing.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DuplicateMergeDto"
+              }
+            ]
+          },
+          "blockedBy": {
+            "type": "string",
+            "nullable": true,
+            "description": "Confirming or dismissing this is refused, and why (null when it is allowed)."
+          },
+          "decidedBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "decidedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "reason",
+          "status",
+          "kept",
+          "superseded",
+          "merge",
+          "blockedBy",
+          "decidedBy",
+          "decidedAt",
+          "createdAt"
+        ]
+      },
+      "DisqualifyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Shown to the team and recorded in the audit trail.",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
         ]
       }
     }

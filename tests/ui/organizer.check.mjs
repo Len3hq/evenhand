@@ -1,6 +1,6 @@
 // Clicks through the organiser pages in a real browser against the running stack.
 // Run with `npm run test:ui` (tests/ui/run.sh). Creates one event named "Browser Check <time>".
-/* global document -- used inside page callbacks, which run in the browser */
+/* global document, fetch -- used inside page callbacks, which run in the browser */
 import { BASE, finish, openBrowser, step } from './harness.mjs';
 
 const { browser, newPage } = await openBrowser();
@@ -167,6 +167,45 @@ await step('rank the fixture event, publish it, and a visitor sees the results',
   await visitor.getByRole('heading', { name: 'Sample Hack 2026: results' }).waitFor();
   await visitor.getByText('Salt Ledger').waitFor();
   await page.goto(back);
+});
+
+/** Status of a public API call made by the page itself (same origin as a visitor). */
+const statusOf = (path) => page.evaluate((p) => fetch(p).then((r) => r.status), path);
+
+await step('confirm the planted duplicate, see where its reviews went, then undo it', async () => {
+  await page.goto(`${BASE}/organizer/events/evt_01/entries`);
+  await page.getByRole('heading', { name: 'Entries and duplicates' }).waitFor();
+  const card = page.locator('div.rounded-lg', {
+    has: page.locator('h3', { hasText: 'Dry Harbour' }),
+  });
+  await card.getByText('Waiting for your decision').waitFor();
+  // jdg_01 and jdg_12 reviewed only the older copy; their reviews move across.
+  await card.getByText(/Reviews that move to the newer copy.*: .+, .+\./).waitFor();
+  if (await card.locator('button:has-text("Not a duplicate")').count()) {
+    throw new Error('one team’s two entries must not offer "Not a duplicate"');
+  }
+  await card.locator('button:has-text("Confirm: keep the newer copy")').click();
+  await card.getByText(/Confirmed by Demo Organizer/).waitFor();
+  if ((await statusOf('/api/projects/prj_07')) !== 404) throw new Error('prj_07 still public');
+  await page.locator('tr', { hasText: 'Replaced by a newer copy' }).waitFor();
+
+  await card.locator('button:has-text("Undo")').click();
+  await card.getByText('Waiting for your decision').waitFor();
+  if ((await statusOf('/api/projects/prj_07')) !== 200) throw new Error('prj_07 not restored');
+});
+
+await step('disqualify an entry with a reason, then reinstate it', async () => {
+  const row = page.locator('tr', { hasText: 'Glass Signal' });
+  await row.locator('button:has-text("Disqualify…")').click();
+  await row.locator('input').fill('Browser check: rules breach');
+  await row.getByRole('button', { name: 'Disqualify', exact: true }).click();
+  await row.getByText('Reason: Browser check: rules breach').waitFor();
+  if ((await statusOf('/api/projects/prj_01')) !== 404) throw new Error('prj_01 still public');
+
+  await row.locator('button:has-text("Reinstate")').click();
+  await row.getByText('In judging').waitFor();
+  if ((await statusOf('/api/projects/prj_01')) !== 200) throw new Error('prj_01 not restored');
+  await page.goto(`${BASE}/organizer/events/${slug}`);
 });
 
 await step('appoint an organiser, then remove them', async () => {

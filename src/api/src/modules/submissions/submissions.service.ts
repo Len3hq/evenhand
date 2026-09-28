@@ -284,6 +284,10 @@ function toDto(s: Submission): SubmissionDto {
     techTags: s.techTags,
     status: s.status,
     submittedAt: s.submittedAt?.toISOString() ?? null,
+    eligibility: s.eligibility,
+    disqualifyReason: s.disqualifyReason,
+    supersededById: s.supersededById,
+    duplicateHold: s.duplicateHold,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
   };

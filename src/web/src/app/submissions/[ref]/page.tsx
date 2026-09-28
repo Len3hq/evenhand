@@ -68,6 +68,33 @@ export default async function SubmissionPage({ params }: PageProps<'/submissions
         </p>
       </div>
 
+      {submission.eligibility === 'DISQUALIFIED' ? (
+        <div role="alert" className="rounded-lg border border-danger p-4 text-sm text-danger">
+          <p className="font-medium">Disqualified by the organisers</p>
+          <p className="mt-1">
+            Reason: {submission.disqualifyReason}. It is out of the gallery, judging and results.
+            Ask the organisers if you think this is a mistake.
+          </p>
+        </div>
+      ) : submission.supersededById ? (
+        <Card>
+          <p className="text-sm">
+            This is an older copy. The organisers kept your team&apos;s newer entry,{' '}
+            <Link href={`/submissions/${submission.supersededById}`} className="underline">
+              which is the one judged
+            </Link>
+            .
+          </p>
+        </Card>
+      ) : submission.duplicateHold ? (
+        <Card>
+          <p className="text-sm">
+            Your team has two entries. This older copy is on hold until the organisers confirm which
+            one is judged (normally the newer one).
+          </p>
+        </Card>
+      ) : null}
+
       {!open ? (
         <Card>
           <p className="text-sm">

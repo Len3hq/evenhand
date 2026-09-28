@@ -43,7 +43,10 @@ export default async function ReviewPage({ params }: PageProps<'/judging/[assign
           ← Queue
         </Link>
         <span className="text-muted">
-          {review.eventName} · project {review.position + 1} of {review.queueLength}
+          {review.eventName} ·{' '}
+          {review.inJudging
+            ? `project ${review.position + 1} of ${review.queueLength}`
+            : 'withdrawn from judging by the organisers (disqualified or replaced by a newer copy)'}
         </span>
       </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">

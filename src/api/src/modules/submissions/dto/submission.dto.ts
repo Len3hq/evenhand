@@ -131,6 +131,14 @@ export class SubmissionDto {
   status: 'DRAFT' | 'SUBMITTED';
   /** When it was first submitted. */
   submittedAt: string | null;
+  /** DISQUALIFIED by the organisers: out of the gallery, judging and rankings. */
+  eligibility: 'ELIGIBLE' | 'DISQUALIFIED';
+  /** The organisers' reason; null unless disqualified. */
+  disqualifyReason: string | null;
+  /** The team's newer entry that replaced this one as a confirmed duplicate, if any. */
+  supersededById: string | null;
+  /** The older copy of a suspected duplicate, waiting for the organisers' decision. */
+  duplicateHold: boolean;
   createdAt: string;
   updatedAt: string;
 }

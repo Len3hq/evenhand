@@ -69,12 +69,18 @@ export class ReviewDto {
   assignmentId: string;
   eventId: string;
   eventName: string;
+  /** Place in the queue from 0; -1 when the project is no longer in judging. */
   position: number;
-  /** Assignments in this judge's queue for the event. */
+  /** Assignments in this judge's queue for the event (projects still in judging). */
   queueLength: number;
   previousAssignmentId: string | null;
   nextAssignmentId: string | null;
   judgingOpen: boolean;
+  /**
+   * False once the project was disqualified or replaced by a newer copy: the review can be
+   * read but not changed (409 `not_in_judging`).
+   */
+  inJudging: boolean;
   project: ReviewProjectDto;
   criteria: ReviewCriterionDto[];
   state: ReviewState;
