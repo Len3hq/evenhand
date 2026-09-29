@@ -25,7 +25,7 @@ const MODES: { value: Mode; label: string; hint: string }[] = [
   {
     value: 'OPEN_LINK',
     label: 'A shared link',
-    hint: 'Anyone with the link gets a ballot of their own; rate limited per address.',
+    hint: 'Anyone with the link gets a ballot; the weakest against one person voting twice.',
   },
 ];
 
@@ -273,6 +273,14 @@ export function VotingPanel({
             ) : null}
           </div>
 
+          {round.mode === 'OPEN_LINK' && admin.passes > 0 && admin.passesWithAddress === 0 ? (
+            <p role="note" className="rounded-lg border border-border p-3 text-sm text-muted">
+              The portal cannot see voters’ addresses (no proxy in front of it reports them), so one
+              person taking several ballots cannot be spotted by address. A browser that follows the
+              link again gets its own ballot back, but a private window or another device gets a new
+              one. For a vote with a prize, use accounts or emailed links.
+            </p>
+          ) : null}
           {admin.repeatAddresses > 0 ? (
             <p role="note" className="rounded-lg border border-warning p-3 text-sm">
               {admin.repeatBallots} ballots were taken by {admin.repeatAddresses} address

@@ -223,16 +223,39 @@ export class VotingService {
 
   // ── Voters ─────────────────────────────────────────────────────────────────
 
-  /** OPEN_LINK: hands the visitor a personal voting link of their own, while the vote is open. */
-  async passFromLink(linkToken: string, ip: string | null): Promise<VotingLinkDto> {
+  /**
+   * OPEN_LINK: hands the visitor a personal voting link of their own, while the vote is open.
+   * A browser that already took one gets the same one back (`remembered`, from its cookie), so
+   * following the shared link again does not make a second ballot. `address` is the voter's
+   * address only when a proxy in front of the portal reported it; without one the API sees only
+   * the web container, which says nothing about who is voting, so nothing is stored.
+   */
+  async passFromLink(
+    linkToken: string,
+    ip: string | null,
+    address: string | null,
+    remembered: (roundId: string) => string | undefined,
+  ): Promise<{ token: string; roundId: string; reused: boolean }> {
     const round = await this.prisma.votingRound.findUnique({
       where: { linkTokenHash: hashToken(linkToken) },
     });
     if (!round || round.mode !== 'OPEN_LINK') throw invalidLink();
+    const kept = remembered(round.id);
+    if (kept) {
+      const pass = await this.prisma.voterPass.findUnique({
+        where: { tokenHash: hashToken(kept) },
+        select: { roundId: true },
+      });
+      if (pass?.roundId === round.id) {
+        return { token: kept, roundId: round.id, reused: true };
+      }
+    }
     this.assertOpen(round);
     const token = generateToken();
     await this.prisma.$transaction(async (tx) => {
-      await tx.voterPass.create({ data: { roundId: round.id, tokenHash: hashToken(token), ip } });
+      await tx.voterPass.create({
+        data: { roundId: round.id, tokenHash: hashToken(token), ip: address },
+      });
       await this.audit.record(tx, {
         eventId: round.eventId,
         action: 'voting.link_used',
@@ -241,7 +264,7 @@ export class VotingService {
         ip,
       });
     });
-    return { token };
+    return { token, roundId: round.id, reused: false };
   }
 
   async ballot(voter: Voter, eventRef?: string): Promise<BallotDto> {
@@ -503,6 +526,7 @@ export class VotingService {
         ballots: 0,
         votes: 0,
         passes: 0,
+        passesWithAddress: 0,
         repeatAddresses: 0,
         repeatBallots: 0,
         tallies: [],
@@ -522,7 +546,8 @@ export class VotingService {
     // Duplicate detection for the shared link: an address that took more than one ballot may
     // be one person voting several times (or several people behind one network). Organisers
     // see how many, and those ballots' votes apart in the tally, before deciding to publish;
-    // the addresses themselves are never shown.
+    // the addresses themselves are never shown. Addresses are known only behind a proxy that
+    // reports them (see passFromLink), so the count of passes with one is returned too.
     const repeats = byAddress.filter((a) => a._count._all > 1);
     const repeatIps = repeats.map((a) => a.ip!);
     const repeatCounts = repeatIps.length
@@ -538,6 +563,7 @@ export class VotingService {
       ballots,
       votes,
       passes,
+      passesWithAddress: byAddress.reduce((n, a) => n + a._count._all, 0),
       repeatAddresses: repeats.length,
       repeatBallots: repeats.reduce((n, a) => n + a._count._all, 0),
       tallies: tallies.map((t) => ({ ...t, repeatVotes: repeatVotes.get(t.projectId) ?? 0 })),

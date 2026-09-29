@@ -1372,7 +1372,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** OPEN_LINK: take a personal voting link from the shared one. Rate limited per address. */
+        /**
+         * OPEN_LINK: take a personal voting link from the shared one. A browser that already took
+         *     one gets the same one back (an httpOnly cookie remembers it). Rate limited per address.
+         */
         post: operations["VotingController_passFromLink"];
         delete?: never;
         options?: never;
@@ -2344,6 +2347,11 @@ export interface components {
             votes: number;
             /** @description Personal voting links made so far (email list and open link). */
             passes: number;
+            /**
+             * @description Shared link: ballots whose address is known. Zero when no proxy in front of the portal
+             *     reports voters' addresses, and then repeats cannot be detected by address.
+             */
+            passesWithAddress: number;
             /** @description Shared link: addresses that took more than one ballot. The addresses are not shown. */
             repeatAddresses: number;
             /** @description Shared link: the ballots those addresses took. */
@@ -2414,6 +2422,12 @@ export interface components {
         CastVoteDto: {
             /** @description The project: its id or fixture id. */
             project: string;
+        };
+        TakenPassDto: {
+            /** @description The secret of the voter's personal link, /vote/<token>. */
+            token: string;
+            /** @description True when this browser had already taken this ballot and gets the same one back. */
+            reused: boolean;
         };
         PublicVotingStatusDto: {
             /** @enum {string} */
@@ -4512,7 +4526,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VotingLinkDto"];
+                    "application/json": components["schemas"]["TakenPassDto"];
                 };
             };
         };

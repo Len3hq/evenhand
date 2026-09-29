@@ -88,6 +88,11 @@ export class VotingAdminDto {
   votes: number;
   /** Personal voting links made so far (email list and open link). */
   passes: number;
+  /**
+   * Shared link: ballots whose address is known. Zero when no proxy in front of the portal
+   * reports voters' addresses, and then repeats cannot be detected by address.
+   */
+  passesWithAddress: number;
   /** Shared link: addresses that took more than one ballot. The addresses are not shown. */
   repeatAddresses: number;
   /** Shared link: the ballots those addresses took. */
@@ -111,6 +116,13 @@ export class IssuedPassesDto {
 export class VotingLinkDto {
   /** The shared link's secret, /vote/link/<token>. Shown once; making a new one retires it. */
   token: string;
+}
+
+export class TakenPassDto {
+  /** The secret of the voter's personal link, /vote/<token>. */
+  token: string;
+  /** True when this browser had already taken this ballot and gets the same one back. */
+  reused: boolean;
 }
 
 export class BallotProjectDto {

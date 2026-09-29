@@ -362,6 +362,16 @@ describe('voting with personal links for listed emails', () => {
 describe('voting through a shared link', () => {
   let s: Scenario;
   let shared: string;
+  let first: { token: string; cookie: string };
+  const take = (link: string, headers: Record<string, string> = {}) =>
+    t.http().post(`/api/voting/links/${link}/passes`).set(headers);
+  /** The `name=value` part of the ballot cookie a response set. */
+  const ballotCookie = (res: { headers: Record<string, unknown> }): string => {
+    const all = res.headers['set-cookie'] as string[] | undefined;
+    const found = all?.find((c) => c.startsWith('evenhand_ballot_'));
+    if (!found) throw new Error('no ballot cookie');
+    return found.split(';')[0]!;
+  };
 
   beforeAll(async () => {
     clock.set(BEFORE);
@@ -373,34 +383,79 @@ describe('voting through a shared link', () => {
     const link = await t.http().post(`/api/events/${s.ev.slug}/voting/link`).set(organizer);
     expect(link.status).toBe(201);
     shared = link.body.token;
-    const early = await t.http().post(`/api/voting/links/${shared}/passes`);
+    const early = await take(shared);
     expect(early.status).toBe(403);
     expect(early.body.error).toBe('voting_not_open');
 
     clock.set(DURING);
-    const pass = await t.http().post(`/api/voting/links/${shared}/passes`);
+    const pass = await take(shared);
     expect(pass.status).toBe(201);
+    expect(pass.body.reused).toBe(false);
+    // httpOnly, and sent back only to the voting routes.
+    expect(pass.headers['set-cookie']![0]).toMatch(/HttpOnly/);
+    expect(pass.headers['set-cookie']![0]).toMatch(/Path=\/api\/voting/);
+    first = { token: pass.body.token, cookie: ballotCookie(pass) };
     const voted = await t
       .http()
-      .post(`/api/voting/passes/${pass.body.token}/votes`)
+      .post(`/api/voting/passes/${first.token}/votes`)
       .send({ project: s.toolsProject.id });
     expect(voted.status).toBe(200);
   });
 
-  it('retires the old link when a new one is made', async () => {
+  it('gives a browser that already took a ballot the same one back', async () => {
+    const again = await take(shared, { Cookie: first.cookie });
+    expect(again.status).toBe(201);
+    expect(again.body).toEqual({ token: first.token, reused: true });
+    // A cookie for a ballot that is not this vote's is ignored: a new ballot.
+    const stranger = await take(shared, { Cookie: `${first.cookie.split('=')[0]}=made-up` });
+    expect(stranger.body.reused).toBe(false);
+    expect(stranger.body.token).not.toBe(first.token);
+  });
+
+  it('retires the old link when a new one is made; the same browser keeps its ballot', async () => {
     const next = await t.http().post(`/api/events/${s.ev.slug}/voting/link`).set(organizer);
-    expect((await t.http().post(`/api/voting/links/${shared}/passes`)).status).toBe(404);
-    expect((await t.http().post(`/api/voting/links/${next.body.token}/passes`)).status).toBe(201);
-    const admin = await t.http().get(`/api/events/${s.ev.slug}/voting`).set(organizer);
-    expect(admin.body).toMatchObject({ passes: 2, ballots: 1, votes: 1 });
-    // Both ballots came from this test's one address: flagged, with the vote counted apart.
-    expect(admin.body).toMatchObject({ repeatAddresses: 1, repeatBallots: 2 });
+    expect((await take(shared)).status).toBe(404);
+    shared = next.body.token;
+    expect((await take(shared, { Cookie: first.cookie })).body).toEqual({
+      token: first.token,
+      reused: true,
+    });
+  });
+
+  it('flags ballots taken by one address more than once, only when a proxy reports addresses', async () => {
+    // Without a reported address (the portal with no proxy in front), nothing is flagged.
+    let admin = await t.http().get(`/api/events/${s.ev.slug}/voting`).set(organizer);
+    expect(admin.body).toMatchObject({
+      passes: 2,
+      passesWithAddress: 0,
+      repeatAddresses: 0,
+      repeatBallots: 0,
+    });
+
+    // Behind a proxy that reports addresses, two ballots from one address are flagged.
+    const proxied = { 'X-Forwarded-For': '203.0.113.7' };
+    const b = await take(shared, proxied);
+    expect((await take(shared, proxied)).body.token).not.toBe(b.body.token);
+    await t
+      .http()
+      .post(`/api/voting/passes/${b.body.token}/votes`)
+      .send({ project: s.toolsProject.id });
+
+    admin = await t.http().get(`/api/events/${s.ev.slug}/voting`).set(organizer);
+    expect(admin.body).toMatchObject({
+      passes: 4,
+      passesWithAddress: 2,
+      repeatAddresses: 1,
+      repeatBallots: 2,
+      ballots: 2,
+      votes: 2,
+    });
     const tools = admin.body.tallies.find(
       (r: { projectId: string }) => r.projectId === s.toolsProject.id,
     );
-    expect(tools).toMatchObject({ votes: 1, repeatVotes: 1 });
-    // Addresses never leave the API, and the public results carry no such detail.
-    expect(JSON.stringify(admin.body)).not.toMatch(/127\.0\.0\.1|::1/);
+    expect(tools).toMatchObject({ votes: 2, repeatVotes: 1 });
+    // Addresses never leave the API.
+    expect(JSON.stringify(admin.body)).not.toContain('203.0.113.7');
     expect(admin.body.round.hasLink).toBe(true);
   });
 });

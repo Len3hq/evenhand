@@ -3109,13 +3109,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VotingLinkDto"
+                  "$ref": "#/components/schemas/TakenPassDto"
                 }
               }
             }
           }
         },
-        "summary": "OPEN_LINK: take a personal voting link from the shared one. Rate limited per address.",
+        "summary": "OPEN_LINK: take a personal voting link from the shared one. A browser that already took\none gets the same one back (an httpOnly cookie remembers it). Rate limited per address.",
         "tags": [
           "voting"
         ]
@@ -6493,6 +6493,10 @@
             "type": "number",
             "description": "Personal voting links made so far (email list and open link)."
           },
+          "passesWithAddress": {
+            "type": "number",
+            "description": "Shared link: ballots whose address is known. Zero when no proxy in front of the portal\nreports voters' addresses, and then repeats cannot be detected by address."
+          },
           "repeatAddresses": {
             "type": "number",
             "description": "Shared link: addresses that took more than one ballot. The addresses are not shown."
@@ -6514,6 +6518,7 @@
           "ballots",
           "votes",
           "passes",
+          "passesWithAddress",
           "repeatAddresses",
           "repeatBallots",
           "tallies"
@@ -6738,6 +6743,23 @@
         },
         "required": [
           "project"
+        ]
+      },
+      "TakenPassDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The secret of the voter's personal link, /vote/<token>."
+          },
+          "reused": {
+            "type": "boolean",
+            "description": "True when this browser had already taken this ballot and gets the same one back."
+          }
+        },
+        "required": [
+          "token",
+          "reused"
         ]
       },
       "PublicVotingStatusDto": {

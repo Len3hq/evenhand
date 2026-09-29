@@ -285,6 +285,36 @@ await step('run a community vote: vote, close it, publish it, and a visitor sees
   await page.goto(back);
 });
 
+await step('a shared voting link gives a browser its own ballot back', async () => {
+  const back = page.url();
+  await page.goto(`${BASE}/organizer/events/${slug}/voting`);
+  const utc = (ms) => new Date(Date.now() + ms).toISOString().slice(0, 16);
+  await page.getByLabel('A shared link').check();
+  await page.fill('#opensAt', utc(-60 * 60_000));
+  await page.fill('#closesAt', utc(60 * 60_000));
+  await page.fill('#votesPerVoter', '1');
+  await page.getByRole('button', { name: 'Set up the vote' }).click();
+  await page.getByRole('button', { name: 'Make the shared link' }).click();
+  const shown = await page.getByText(/\/vote\/link\//).innerText();
+  const link = shown.match(/\/vote\/link\/[A-Za-z0-9_-]+/)[0];
+
+  const visitor = await newPage();
+  const takeBallot = async () => {
+    await visitor.goto(`${BASE}${link}`);
+    await visitor.getByRole('button', { name: 'Get my ballot' }).click();
+    await visitor.waitForURL(/\/vote\/(?!link\/)[A-Za-z0-9_-]+$/);
+    return visitor.url();
+  };
+  const first = await takeBallot();
+  const second = await takeBallot();
+  if (second !== first) throw new Error('following the link again made a second ballot');
+
+  // Without a proxy in front, the portal says it cannot see addresses instead of flagging.
+  await page.reload();
+  await page.getByText('The portal cannot see voters’ addresses').waitFor();
+  await page.goto(back);
+});
+
 await step('confirm the planted duplicate, see where its reviews went, then undo it', async () => {
   await page.goto(`${BASE}/organizer/events/evt_01/entries`);
   await page.getByRole('heading', { name: 'Entries and duplicates' }).waitFor();

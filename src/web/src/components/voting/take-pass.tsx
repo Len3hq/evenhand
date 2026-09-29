@@ -8,7 +8,8 @@ import type { Schemas } from '@/lib/api/types';
 
 /**
  * The shared voting link's page: one click makes a personal voting link and opens it. A click,
- * not a page load, so link previews and prefetching never make ballots.
+ * not a page load, so link previews and prefetching never make ballots. A browser that already
+ * took a ballot is given the same one back (the API remembers it in a cookie).
  */
 export function TakePass({ linkToken }: { linkToken: string }) {
   const router = useRouter();
@@ -19,7 +20,7 @@ export function TakePass({ linkToken }: { linkToken: string }) {
     setBusy(true);
     setError(null);
     try {
-      const pass = await apiPost<Schemas['VotingLinkDto']>(
+      const pass = await apiPost<Schemas['TakenPassDto']>(
         `/api/voting/links/${encodeURIComponent(linkToken)}/passes`,
       );
       router.push(`/vote/${pass.token}`);

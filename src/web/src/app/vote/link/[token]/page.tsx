@@ -11,6 +11,7 @@ export default async function SharedLinkPage({ params }: PageProps<'/vote/link/[
       <p className="text-sm text-muted">
         You have been invited to vote for your favourite projects. You get a ballot of your own, at
         a personal address: keep it to come back and change your votes while voting is open.
+        Following this link again in the same browser brings you back to the same ballot.
       </p>
       <TakePass linkToken={token} />
     </section>

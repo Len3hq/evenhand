@@ -9,9 +9,10 @@ import {
   Post,
   Put,
   Req,
+  Res,
 } from '@nestjs/common';
 import { ApiParam, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import type { Actor } from '../../core/auth/actor.js';
 import { CurrentActor, Public, VoteRateLimit } from '../../core/auth/decorators.js';
 import {
@@ -22,6 +23,7 @@ import {
   IssuePassesDto,
   PublicVotingResultsDto,
   PublicVotingStatusDto,
+  TakenPassDto,
   VotingAdminDto,
   VotingLinkDto,
 } from './dto/voting.dto.js';
@@ -32,6 +34,17 @@ const PROJECT = { name: 'project', description: 'Project id or fixture id (prj_0
 const PASS = { name: 'token', description: 'The secret of a personal voting link.' };
 
 const ip = (req: Request): string | null => req.ip ?? null;
+
+/**
+ * The voter's own address, only when a proxy in front of the portal reported it. Without one,
+ * every browser reaches the API through the web container and would share its address.
+ */
+const reportedAddress = (req: Request): string | null =>
+  req.headers['x-forwarded-for'] ? ip(req) : null;
+
+/** One cookie per vote, holding the ballot this browser took from its shared link. */
+const ballotCookie = (roundId: string): string => `evenhand_ballot_${roundId}`;
+const BALLOT_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 @ApiTags('voting')
 @Controller()
@@ -157,13 +170,35 @@ export class VotingController {
     return this.voting.withdraw({ passToken: token }, project, ip(req));
   }
 
-  /** OPEN_LINK: take a personal voting link from the shared one. Rate limited per address. */
+  /**
+   * OPEN_LINK: take a personal voting link from the shared one. A browser that already took
+   * one gets the same one back (an httpOnly cookie remembers it). Rate limited per address.
+   */
   @Public()
   @ApiParam({ name: 'token', description: 'The secret of the shared voting link.' })
   @VoteRateLimit()
   @Post('voting/links/:token/passes')
-  passFromLink(@Param('token') token: string, @Req() req: Request): Promise<VotingLinkDto> {
-    return this.voting.passFromLink(token, ip(req));
+  async passFromLink(
+    @Param('token') token: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<TakenPassDto> {
+    const cookies = (req.cookies ?? {}) as Record<string, string | undefined>;
+    const pass = await this.voting.passFromLink(
+      token,
+      ip(req),
+      reportedAddress(req),
+      (roundId) => cookies[ballotCookie(roundId)],
+    );
+    res.cookie(ballotCookie(pass.roundId), pass.token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: req.secure,
+      path: '/api/voting',
+      // Longer than any vote runs; the organisers can move the closing date later.
+      maxAge: BALLOT_COOKIE_MAX_AGE_MS,
+    });
+    return { token: pass.token, reused: pass.reused };
   }
 
   // ── Everyone ───────────────────────────────────────────────────────────────
