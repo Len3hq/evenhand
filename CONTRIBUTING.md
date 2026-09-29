@@ -1,7 +1,6 @@
 # Contributing to Evenhand
 
 One set of rules for everyone, human or AI agent. Read it in full once; it is short on purpose.
-The team plan these rules come from is [docs/planning/TEAM-PLAN.md](docs/planning/TEAM-PLAN.md).
 
 ## 1. Setup
 
@@ -62,7 +61,7 @@ The reference module is **`src/api/src/modules/gallery`** (controller → servic
 
 ## 5. Areas and hot files
 
-The build was planned around three areas, which still say who designs and reviews what: **A** platform and security (`core/`, auth, Prisma, Docker, CI, the isolation matrix), **B** judging (`judging-engine`, `modules/judging`, rankings, duplicates, JUDGING.md) and **C** product and UI (`src/web`). Anyone may change any file, as long as the rules in §3–4 and the definition of done below hold. `.github/CODEOWNERS` names the whole team on every path, which only matters if you open a pull request.
+The build was planned around three areas, which still say who designs and reviews what: **A** platform and security (`core/`, auth, Prisma, Docker, CI, the isolation matrix), **B** judging (`judging-engine`, `modules/judging`, rankings, duplicates, JUDGING.md) and **C** product and UI (`src/web`). Anyone may change any file, as long as the rules in §3–4 and the definition of done below hold.
 
 Some files are shared by everyone and need care:
 
@@ -112,4 +111,4 @@ One file per decision, `docs/decisions/<yyyymmdd-hhmm>-<a|b|c>-<slug>.md` (UTC t
 
 ## 7. Rules for AI agents
 
-The root [CLAUDE.md](CLAUDE.md) is loaded by every Claude Code session. In short: follow this file, never edit generated files or merged migrations, run `npm run check` (and the acceptance, browser and offline checks when routes, auth, seeding or Docker change) before calling anything done, and never weaken or delete a failing test to make it pass.
+AI agents follow this file like everyone else. In short: never edit generated files or merged migrations, run `npm run check` (and the acceptance, browser and offline checks when routes, auth, seeding or Docker change) before calling anything done, and never weaken or delete a failing test to make it pass.
