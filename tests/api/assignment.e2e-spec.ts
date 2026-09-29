@@ -199,3 +199,22 @@ describe('running assignment', () => {
     expect((await run(e.ev.slug, { target: 11 })).status).toBe(400);
   });
 });
+
+describe('two organisers running assignment at the same moment', () => {
+  it('runs one after the other: both succeed and no project goes past the target', async () => {
+    const { judgedEvent } = await import('./scenario.js');
+    const s = await judgedEvent(t);
+    const run = () =>
+      t.http().post(`/api/events/${s.ev.slug}/assignments/run`).set(organizer).send({ target: 3 });
+    const [a, b] = await Promise.all([run(), run()]);
+    expect([a.status, b.status]).toEqual([200, 200]);
+    // Whichever ran second found the work already handed out.
+    expect(Math.min(a.body.added, b.body.added)).toBe(0);
+    const perProject = await t.prisma.assignment.groupBy({
+      by: ['submissionId'],
+      where: { judgeRole: { eventId: s.ev.id } },
+      _count: true,
+    });
+    expect(Math.max(...perProject.map((p) => p._count))).toBeLessThanOrEqual(3);
+  });
+});

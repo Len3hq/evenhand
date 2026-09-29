@@ -36,7 +36,7 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
     case 'judge.joined':
       return `${who} joined as a judge for ${list(after.tracks)}`;
     case 'judge.tracks_updated':
-      return `${who} changed the tracks ${it} judges: ${list(asRecord(entry.before).tracks)} → ${list(after.tracks)}`;
+      return `${who} changed the tracks ${it} judges: ${list(asRecord(entry.before).tracks)} → ${list(after.tracks)}${Number(after.unstartedAssignmentsRemoved ?? 0) ? `; ${show(after.unstartedAssignmentsRemoved)} unstarted assignment${after.unstartedAssignmentsRemoved === 1 ? '' : 's'} outside them removed` : ''}`;
     case 'judge.removed':
       return `${who} removed the judge ${it}`;
     case 'assignment.run': {

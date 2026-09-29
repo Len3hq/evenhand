@@ -181,3 +181,46 @@ describe('isolation', () => {
     expect((await get(s.first, bearer(TOKENS.participant))).status).toBe(403);
   });
 });
+
+describe('track isolation after an organiser changes a judge’s tracks', () => {
+  const setTracks = (slug: string, judgeId: string, tracks: string[]) =>
+    t.http().put(`/api/events/${slug}/judges/${judgeId}/tracks`).set(organizer).send({ tracks });
+
+  it('takes the old track’s projects away: unstarted work is removed, started work is locked', async () => {
+    const s = await setup();
+    const [started, unstarted] = s.mine.items.map((i: { assignmentId: string }) => i.assignmentId);
+    expect((await save(started, { values: { impact: 3 } }, s.judge.headers)).status).toBe(200);
+
+    // Games → Tools only.
+    expect((await setTracks(s.ev.slug, s.judge.judgeId, [s.tools])).status).toBe(200);
+
+    const now = (await queue(s.judge.headers)).events.find(
+      (e: { eventId: string }) => e.eventId === s.ev.id,
+    );
+    expect(now?.items ?? []).toEqual([]);
+    for (const id of [started, unstarted]) {
+      expect((await get(id, s.judge.headers)).status).toBe(403);
+      expect((await save(id, { values: { impact: 1 } }, s.judge.headers)).status).toBe(403);
+      expect((await submit(id, s.judge.headers)).status).toBe(403);
+    }
+    // The unstarted assignments are gone; the started one stays on the record.
+    expect(await t.prisma.assignment.count({ where: { id: unstarted } })).toBe(0);
+    expect(await t.prisma.assignment.count({ where: { id: started } })).toBe(1);
+    const audit = await t.prisma.auditLog.findFirst({
+      where: { action: 'judge.tracks_updated', eventId: s.ev.id },
+      orderBy: { id: 'desc' },
+    });
+    expect(audit?.after).toMatchObject({ unstartedAssignmentsRemoved: 2 });
+  });
+
+  it('gives started work back when the track is given back', async () => {
+    const s = await setup();
+    await save(s.first, { values: { impact: 4 } }, s.judge.headers);
+    await setTracks(s.ev.slug, s.judge.judgeId, [s.tools]);
+    expect((await get(s.first, s.judge.headers)).status).toBe(403);
+    await setTracks(s.ev.slug, s.judge.judgeId, [s.games]);
+    const back = await get(s.first, s.judge.headers);
+    expect(back.status).toBe(200);
+    expect(back.body.values).toEqual({ impact: 4 });
+  });
+});

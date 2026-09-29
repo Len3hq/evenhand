@@ -9,7 +9,7 @@ import { isUuid } from '../../core/refs.js';
 import type { Criterion, Event, Submission } from '../../generated/prisma/client.js';
 import type { JudgeQueueDto, ReviewDto, ReviewState, SaveReviewDto } from './dto/review.dto.js';
 import { IMAGE_ORDER, toImageDto } from '../images/image-dto.js';
-import { IN_JUDGING } from './in-judging.js';
+import { coveredBy, IN_JUDGING } from './in-judging.js';
 
 /**
  * The judge console (T2). A judge reaches only their own assignments: every lookup is "this
@@ -27,9 +27,12 @@ export class ReviewsService {
   /** The caller's assignments in every event they judge, in queue order. */
   async queue(actor: Actor): Promise<JudgeQueueDto> {
     const rows = await this.prisma.assignment.findMany({
-      // Only projects still in judging: a disqualified entry or a replaced or held duplicate
-      // copy leaves the queue (its reviews stay on record).
-      where: { judgeRole: { userId: actor.userId, role: 'JUDGE' }, submission: IN_JUDGING },
+      // Only projects still in judging (a disqualified entry or a replaced or held duplicate
+      // copy leaves the queue; its reviews stay on record) and in a track the judge still covers.
+      where: {
+        judgeRole: { userId: actor.userId, role: 'JUDGE' },
+        submission: { ...IN_JUDGING, ...coveredBy(actor.userId) },
+      },
       include: {
         review: { select: { status: true } },
         submission: { select: { id: true, title: true, track: { select: { name: true } } } },
@@ -87,9 +90,15 @@ export class ReviewsService {
     const marks = checkMarks(criteria, dto.values);
 
     await this.prisma.$transaction(async (tx) => {
+      // Upsert, not create: two autosaves of a review's first marks can arrive together, and
+      // the second then reuses the row the first made (assignment_id is unique).
       const review =
         a.review ??
-        (await tx.review.create({ data: { assignmentId: a.id, status: 'DRAFT', comment: '' } }));
+        (await tx.review.upsert({
+          where: { assignmentId: a.id },
+          create: { assignmentId: a.id, status: 'DRAFT', comment: '' },
+          update: {},
+        }));
       if (!a.review) {
         // Starting a review is audited once; later draft saves are private working state.
         await this.audit.record(tx, {
@@ -152,11 +161,18 @@ export class ReviewsService {
     return this.present(a.id);
   }
 
-  /** Deny first: the only lookup is "this assignment of the caller's". */
+  /**
+   * Deny first: the only lookup is "this assignment of the caller's, in a track they still
+   * cover". An organiser who takes a track away from a judge takes its projects away too.
+   */
   private async ownAssignment(actor: Actor, assignmentId: string) {
     const a = isUuid(assignmentId)
       ? await this.prisma.assignment.findFirst({
-          where: { id: assignmentId, judgeRole: { userId: actor.userId, role: 'JUDGE' } },
+          where: {
+            id: assignmentId,
+            judgeRole: { userId: actor.userId, role: 'JUDGE' },
+            submission: coveredBy(actor.userId),
+          },
           include: {
             review: { include: { scores: true } },
             judgeRole: { include: { event: true } },
@@ -189,7 +205,10 @@ export class ReviewsService {
     });
     const criteria = await this.criteriaOf(a.judgeRole.eventId);
     const queue = await this.prisma.assignment.findMany({
-      where: { judgeRoleId: a.judgeRoleId, submission: IN_JUDGING },
+      where: {
+        judgeRoleId: a.judgeRoleId,
+        submission: { ...IN_JUDGING, ...coveredBy(a.judgeRole.userId) },
+      },
       select: { id: true },
       orderBy: [{ queuePosition: 'asc' }, { assignedAt: 'asc' }, { id: 'asc' }],
     });

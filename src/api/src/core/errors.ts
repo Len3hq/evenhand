@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { Prisma } from '../generated/prisma/client.js';
 
 /**
  * Every machine-readable error code the API can return. Clients (and the web UI) branch on
@@ -43,6 +44,7 @@ export const ERROR_CODES = [
   'duplicate_decided',
   'duplicate_same_team',
   'duplicate_chain',
+  'duplicates_pending',
   'not_submitted',
   'already_disqualified',
   'not_disqualified',
@@ -64,6 +66,7 @@ export const ERROR_CODES = [
   'invite_expired',
   'invite_used_up',
   'ambiguous_reference',
+  'conflict',
   'validation_failed',
   'not_found',
   'rate_limited',
@@ -126,6 +129,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
   }
 
   private toBody(exception: unknown): ErrorBody {
+    // Safety net: a unique constraint that fired is two requests racing for the same thing
+    // (a double-clicked button, two autosaves, two organisers at once), not a server fault.
+    // Services handle the races they know about; anything else is a 409, never a 500.
+    if (exception instanceof Prisma.PrismaClientKnownRequestError && exception.code === 'P2002') {
+      return {
+        statusCode: HttpStatus.CONFLICT,
+        error: 'conflict',
+        message: 'Someone else changed this at the same moment. Reload and try again.',
+      };
+    }
     if (!(exception instanceof HttpException)) {
       return { statusCode: 500, error: 'internal_error', message: 'Something went wrong.' };
     }

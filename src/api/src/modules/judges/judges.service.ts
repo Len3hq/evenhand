@@ -176,6 +176,16 @@ export class JudgesService {
         await tx.judgeTrack.createMany({
           data: tracks.map((t) => ({ judgeRoleId: judge.id, trackId: t.id })),
         });
+        // Track isolation: unstarted work in a track the judge no longer covers goes away (the
+        // next assignment run gives it to someone else). Started or finished reviews stay on
+        // the record, but the judge can no longer open them (ReviewsService, coveredBy).
+        const dropped = await tx.assignment.deleteMany({
+          where: {
+            judgeRoleId: judge.id,
+            review: { is: null },
+            submission: { trackId: { not: null, notIn: tracks.map((t) => t.id) } },
+          },
+        });
         await this.audit.record(tx, {
           actorId: actor.userId,
           eventId: event.id,
@@ -183,7 +193,7 @@ export class JudgesService {
           targetType: 'user',
           targetId: judge.userId,
           before: { tracks: before },
-          after: { tracks: after },
+          after: { tracks: after, unstartedAssignmentsRemoved: dropped.count },
         });
       });
     }

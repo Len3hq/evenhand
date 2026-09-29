@@ -39,8 +39,11 @@ export class AssignmentService {
     const seed = dto.seed ?? randomBytes(4).readUInt32BE(0);
     const batch = `run-${now.toISOString()}`;
 
-    // 3. read, decide (pure), write + audit: one transaction, so two runs cannot interleave.
+    // 3. read, decide (pure), write + audit in one transaction. The per-event advisory lock
+    //    makes a second run wait for the first and then see its assignments, so two
+    //    organisers clicking "run" at once cannot both hand out the same work.
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext(${`assignment:${event.id}`}))`;
       const [submissions, judges, existing, declared] = await Promise.all([
         tx.submission.findMany({
           where: { eventId: event.id, ...IN_JUDGING },

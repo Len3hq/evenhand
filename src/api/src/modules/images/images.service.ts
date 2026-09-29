@@ -12,6 +12,7 @@ import { PrismaService, type Tx } from '../../core/prisma.service.js';
 import { isUuid } from '../../core/refs.js';
 import type { Event, Submission } from '../../generated/prisma/client.js';
 import { PUBLIC_SUBMISSION } from '../gallery/gallery.service.js';
+import { coveredBy } from '../judging/in-judging.js';
 import type { SubmissionImageDto } from './dto/image.dto.js';
 import { IMAGE_ORDER, imageUrl, toImageDto } from './image-dto.js';
 import { IMAGE_RULES, processImage } from './process-image.js';
@@ -182,7 +183,8 @@ export class ImagesService {
   /**
    * The file to send for GET /images/:id[/thumb], and whether it may be cached publicly.
    * An image is public exactly when its project is in the public gallery. Otherwise it is
-   * for the project's team, the event's organisers and admins, and judges assigned to it:
+   * for the project's team, the event's organisers and admins, and judges assigned to it who
+   * still cover its track:
    * 401 for a visitor, 403 for anyone else logged in. The answer depends on the project, so
    * it is looked up first; ids are random UUIDs, and a missing one is 404.
    */
@@ -217,8 +219,13 @@ export class ImagesService {
     if (actor.canManageEvent(s.eventId)) return { path, isPublic };
     const [member, judge] = await Promise.all([
       this.prisma.teamMember.count({ where: { teamId: s.teamId, userId: actor.userId } }),
+      // An assigned judge, and only while they still cover the project's track.
       this.prisma.assignment.count({
-        where: { submissionId: s.id, judgeRole: { userId: actor.userId, role: 'JUDGE' } },
+        where: {
+          submissionId: s.id,
+          judgeRole: { userId: actor.userId, role: 'JUDGE' },
+          submission: coveredBy(actor.userId),
+        },
       }),
     ]);
     if (member || judge) return { path, isPublic };
