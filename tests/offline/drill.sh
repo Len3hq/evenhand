@@ -66,6 +66,10 @@ fi
 
 say "2/5 online preparation: images, playwright package, run.py"
 compose build --quiet
+# The stack starts below with --pull never, so every image it uses must be here already, the
+# pinned Postgres included (build only makes our own two). A machine that has run the portal
+# before has it; a fresh one, such as a CI runner, does not.
+compose pull --quiet db
 mkdir -p "$WORK/pw"
 cp "$REPO"/tests/ui/*.mjs "$WORK/pw/"
 # shellcheck disable=SC2086
