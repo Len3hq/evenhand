@@ -220,6 +220,50 @@ await step('hide a comment with a reason, then restore it', async () => {
   await visitor.getByText(text).waitFor();
 });
 
+await step('run a community vote: vote, close it, publish it, and a visitor sees it', async () => {
+  const back = page.url();
+  await page.goto(`${BASE}/organizer/events/evt_01`);
+  await page.getByRole('link', { name: /Community vote/ }).click();
+  await page.getByRole('heading', { name: 'Community vote' }).waitFor();
+  // The gallery's event filter takes the slug, which this page's address carries.
+  const eventSlug = page.url().match(/\/organizer\/events\/([^/]+)\/voting/)[1];
+  // A UTC minute for a datetime-local input, `ms` from now.
+  const utc = (ms) => new Date(Date.now() + ms).toISOString().slice(0, 16);
+  // A rerun on the same stack finds this vote published, which makes it final; the drill and a
+  // fresh `docker compose up` always start without one.
+  if (!(await page.getByText('this vote is final').count())) {
+    await page.getByLabel('Anyone with an account').check();
+    await page.fill('#opensAt', utc(-60 * 60_000));
+    await page.fill('#closesAt', utc(60 * 60_000));
+    await page.fill('#votesPerVoter', '3');
+    await page.getByRole('button', { name: /Set up the vote|Save vote settings/ }).click();
+    await page.getByText('Open now').waitFor();
+
+    await page.goto(`${BASE}/events/evt_01/vote`);
+    const vote = page.getByRole('button', { name: /^Vote for / }).first();
+    const title = (await vote.getAttribute('aria-label')).replace(/^Vote for /, '');
+    await vote.click();
+    await page.getByRole('button', { name: `Withdraw your vote for ${title}` }).waitFor();
+
+    await page.goto(`${BASE}/organizer/events/evt_01/voting`);
+    const votes = await page.locator('tr', { hasText: title }).locator('td').last().innerText();
+    if (Number(votes) < 1) throw new Error(`the tally shows ${votes} votes for ${title}`);
+    // Close the window (dates can move until publishing), then publish.
+    await page.fill('#opensAt', utc(-2 * 60 * 60_000));
+    await page.fill('#closesAt', utc(-60_000));
+    await page.getByRole('button', { name: 'Save vote settings' }).click();
+    await page.getByText('Closed', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Publish the vote' }).click();
+    await page.getByRole('link', { name: 'the public page' }).waitFor();
+  }
+  const visitor = await newPage();
+  await visitor.goto(`${BASE}/projects?event=${eventSlug}`);
+  await visitor.getByRole('link', { name: /Community vote/ }).click();
+  await visitor.waitForURL(/\/events\/[^/]+\/vote\/results$/);
+  await visitor.locator('tbody tr').first().waitFor();
+  await page.goto(back);
+});
+
 await step('confirm the planted duplicate, see where its reviews went, then undo it', async () => {
   await page.goto(`${BASE}/organizer/events/evt_01/entries`);
   await page.getByRole('heading', { name: 'Entries and duplicates' }).waitFor();

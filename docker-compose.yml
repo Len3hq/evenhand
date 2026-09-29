@@ -57,6 +57,7 @@ services:
       RATE_LIMIT_UPLOAD_PER_MIN: '30'
       RATE_LIMIT_IMAGE_PER_MIN: '3000'
       RATE_LIMIT_COMMENT_PER_MIN: '10'
+      RATE_LIMIT_VOTE_PER_MIN: '60'
       AUTH_FAILURES_PER_MIN: '20'
       UPLOADS_DIR: /app/uploads
     volumes:

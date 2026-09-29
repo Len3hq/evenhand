@@ -101,6 +101,20 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
       return `${who} hid a comment on ${it}: ${str(after.reason)}`;
     case 'comment.restored':
       return `${who} restored a hidden comment on ${it}`;
+    case 'voting.configured':
+      return `${who} set up the community vote: ${changes}`;
+    case 'voting.passes_issued':
+      return `${who} made ${show(after.count)} personal voting link(s)`;
+    case 'voting.link_created':
+      return `${who} made a new open voting link (any earlier one stops working)`;
+    case 'voting.link_used':
+      return `Someone took a personal voting link from the open link`;
+    case 'voting.results_published':
+      return `${who} published the community vote results`;
+    case 'vote.cast':
+      return `${actor ? who : 'A voter'} voted for ${it}`;
+    case 'vote.withdrawn':
+      return `${actor ? who : 'A voter'} withdrew their vote for ${it}`;
     case 'fixtures.imported':
       return `${who} imported the event from fixtures.json`;
     case 'demo.seeded':

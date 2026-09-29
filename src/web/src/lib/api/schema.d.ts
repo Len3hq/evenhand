@@ -1177,6 +1177,222 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/events/{ref}/voting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["VotingController_admin"];
+        /** Set up or change the vote. Mode and votes per voter are fixed once a vote is cast. */
+        put: operations["VotingController_configure"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{ref}/voting/passes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** EMAIL_LIST: make a personal voting link for each new email. The secrets are shown once. */
+        post: operations["VotingController_issuePasses"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{ref}/voting/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** OPEN_LINK: make the shared voting link, retiring any earlier one. Shown once. */
+        post: operations["VotingController_createLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{ref}/voting/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish the vote's results. Only after the vote has closed. */
+        post: operations["VotingController_publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{ref}/ballot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["VotingController_ballot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{ref}/ballot/votes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Vote for a project. Voting twice for the same one changes nothing. */
+        post: operations["VotingController_vote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{ref}/ballot/votes/{project}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Withdraw your vote for a project, while the vote is open. */
+        delete: operations["VotingController_withdraw"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/voting/passes/{token}/ballot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["VotingController_passBallot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/voting/passes/{token}/votes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["VotingController_passVote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/voting/passes/{token}/votes/{project}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["VotingController_passWithdraw"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/voting/links/{token}/passes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** OPEN_LINK: take a personal voting link from the shared one. Rate limited per address. */
+        post: operations["VotingController_passFromLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{ref}/votes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["VotingController_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/{ref}/votes/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The vote's results, once the organisers publish them after it closes; 404 before. */
+        get: operations["VotingController_results"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2016,6 +2232,131 @@ export interface components {
         HideCommentDto: {
             /** @description Why it is hidden: recorded in the audit trail and shown to the event's organisers. */
             reason: string;
+        };
+        VotingRoundDto: {
+            /** @enum {string} */
+            mode: "ACCOUNTS" | "EMAIL_LIST" | "OPEN_LINK";
+            opensAt: string;
+            closesAt: string;
+            votesPerVoter: number;
+            /** @description True while votes are counted (server clock). */
+            open: boolean;
+            /** @description True once the window has passed: results can be published. */
+            closed: boolean;
+            /** @description OPEN_LINK: whether a shared link exists (its secret is shown only when it is made). */
+            hasLink: boolean;
+            resultsPublishedAt: string | null;
+        };
+        AdminVoteTallyDto: {
+            /** @description Of `votes`, those from ballots taken by an address that took more than one (shared link). */
+            repeatVotes: number;
+            projectId: string;
+            externalId: string | null;
+            title: string;
+            teamName: string;
+            votes: number;
+        };
+        VotingAdminDto: {
+            /** @description Null until the organisers set up a vote. */
+            round: components["schemas"]["VotingRoundDto"] | null;
+            ballots: number;
+            votes: number;
+            /** @description Personal voting links made so far (email list and open link). */
+            passes: number;
+            /** @description Shared link: addresses that took more than one ballot. The addresses are not shown. */
+            repeatAddresses: number;
+            /** @description Shared link: the ballots those addresses took. */
+            repeatBallots: number;
+            /** @description Every project in the vote, most votes first. Organisers only until results are published. */
+            tallies: components["schemas"]["AdminVoteTallyDto"][];
+        };
+        ConfigureVotingDto: {
+            /**
+             * @description Who may vote: ACCOUNTS (anyone logged in), EMAIL_LIST (a personal link per listed email)
+             *     or OPEN_LINK (a shared link that hands each visitor a personal link).
+             * @enum {string}
+             */
+            mode: "ACCOUNTS" | "EMAIL_LIST" | "OPEN_LINK";
+            /** @description When votes start counting (ISO 8601 with a time zone). */
+            opensAt: string;
+            /** @description When votes stop counting; after opensAt. */
+            closesAt: string;
+            /** @description How many different projects one voter may vote for (1 to 10). */
+            votesPerVoter: number;
+        };
+        IssuePassesDto: {
+            /** @description The voters' emails; each gets one personal voting link. */
+            emails: string[];
+        };
+        IssuedPassDto: {
+            email: string;
+            /** @description The secret for this voter's link, /vote/<token>. Shown once; only its hash is stored. */
+            token: string;
+        };
+        IssuedPassesDto: {
+            created: components["schemas"]["IssuedPassDto"][];
+            /** @description Emails that already had a link (their link is unchanged) or are not email addresses. */
+            skipped: string[];
+        };
+        VotingLinkDto: {
+            /** @description The shared link's secret, /vote/link/<token>. Shown once; making a new one retires it. */
+            token: string;
+        };
+        BallotProjectDto: {
+            id: string;
+            externalId: string | null;
+            title: string;
+            tagline: string | null;
+            teamName: string;
+            track: string | null;
+            thumbnailUrl: string | null;
+            /** @description This ballot has a vote for it. */
+            voted: boolean;
+            /** @description The voter is on this project's team, so cannot vote for it. */
+            own: boolean;
+        };
+        BallotDto: {
+            eventName: string;
+            eventSlug: string;
+            /** @enum {string} */
+            mode: "ACCOUNTS" | "EMAIL_LIST" | "OPEN_LINK";
+            open: boolean;
+            /** @description True once the window has passed. */
+            closed: boolean;
+            opensAt: string;
+            closesAt: string;
+            votesPerVoter: number;
+            votesLeft: number;
+            /** @description In this ballot's own random order, the same every time it is opened. */
+            projects: components["schemas"]["BallotProjectDto"][];
+        };
+        CastVoteDto: {
+            /** @description The project: its id or fixture id. */
+            project: string;
+        };
+        PublicVotingStatusDto: {
+            /** @enum {string} */
+            mode: "ACCOUNTS" | "EMAIL_LIST" | "OPEN_LINK";
+            opensAt: string;
+            closesAt: string;
+            /** @description True while votes are counted (server clock). */
+            open: boolean;
+            /** @description The results page has something to show. */
+            resultsPublished: boolean;
+        };
+        VotingResultDto: {
+            projectId: string;
+            externalId: string | null;
+            title: string;
+            teamName: string;
+            votes: number;
+        };
+        PublicVotingResultsDto: {
+            eventName: string;
+            closedAt: string;
+            publishedAt: string;
+            ballots: number;
+            rows: components["schemas"]["VotingResultDto"][];
         };
     };
     responses: never;
@@ -3788,6 +4129,334 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommentDto"];
+                };
+            };
+        };
+    };
+    VotingController_admin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VotingAdminDto"];
+                };
+            };
+        };
+    };
+    VotingController_configure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigureVotingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VotingAdminDto"];
+                };
+            };
+        };
+    };
+    VotingController_issuePasses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssuePassesDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedPassesDto"];
+                };
+            };
+        };
+    };
+    VotingController_createLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VotingLinkDto"];
+                };
+            };
+        };
+    };
+    VotingController_publish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VotingAdminDto"];
+                };
+            };
+        };
+    };
+    VotingController_ballot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BallotDto"];
+                };
+            };
+        };
+    };
+    VotingController_vote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CastVoteDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BallotDto"];
+                };
+            };
+        };
+    };
+    VotingController_withdraw: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                ref: string;
+                /** @description Project id or fixture id (prj_01). */
+                project: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BallotDto"];
+                };
+            };
+        };
+    };
+    VotingController_passBallot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The secret of a personal voting link. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BallotDto"];
+                };
+            };
+        };
+    };
+    VotingController_passVote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The secret of a personal voting link. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CastVoteDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BallotDto"];
+                };
+            };
+        };
+    };
+    VotingController_passWithdraw: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The secret of a personal voting link. */
+                token: string;
+                /** @description Project id or fixture id (prj_01). */
+                project: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BallotDto"];
+                };
+            };
+        };
+    };
+    VotingController_passFromLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The secret of the shared voting link. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VotingLinkDto"];
+                };
+            };
+        };
+    };
+    VotingController_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicVotingStatusDto"];
+                };
+            };
+        };
+    };
+    VotingController_results: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Event id, fixture id (evt_01) or slug. */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicVotingResultsDto"];
                 };
             };
         };

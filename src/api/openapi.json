@@ -2663,6 +2663,504 @@
           "comments"
         ]
       }
+    },
+    "/api/events/{ref}/voting": {
+      "get": {
+        "operationId": "VotingController_admin",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VotingAdminDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "voting"
+        ]
+      },
+      "put": {
+        "operationId": "VotingController_configure",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigureVotingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VotingAdminDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Set up or change the vote. Mode and votes per voter are fixed once a vote is cast.",
+        "tags": [
+          "voting"
+        ]
+      }
+    },
+    "/api/events/{ref}/voting/passes": {
+      "post": {
+        "operationId": "VotingController_issuePasses",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuePassesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedPassesDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "EMAIL_LIST: make a personal voting link for each new email. The secrets are shown once.",
+        "tags": [
+          "voting"
+        ]
+      }
+    },
+    "/api/events/{ref}/voting/link": {
+      "post": {
+        "operationId": "VotingController_createLink",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VotingLinkDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "OPEN_LINK: make the shared voting link, retiring any earlier one. Shown once.",
+        "tags": [
+          "voting"
+        ]
+      }
+    },
+    "/api/events/{ref}/voting/publish": {
+      "post": {
+        "operationId": "VotingController_publish",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VotingAdminDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Publish the vote's results. Only after the vote has closed.",
+        "tags": [
+          "voting"
+        ]
+      }
+    },
+    "/api/events/{ref}/ballot": {
+      "get": {
+        "operationId": "VotingController_ballot",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BallotDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "voting"
+        ]
+      }
+    },
+    "/api/events/{ref}/ballot/votes": {
+      "post": {
+        "operationId": "VotingController_vote",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CastVoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BallotDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Vote for a project. Voting twice for the same one changes nothing.",
+        "tags": [
+          "voting"
+        ]
+      }
+    },
+    "/api/events/{ref}/ballot/votes/{project}": {
+      "delete": {
+        "operationId": "VotingController_withdraw",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "project",
+            "required": true,
+            "in": "path",
+            "description": "Project id or fixture id (prj_01).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BallotDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Withdraw your vote for a project, while the vote is open.",
+        "tags": [
+          "voting"
+        ]
+      }
+    },
+    "/api/voting/passes/{token}/ballot": {
+      "get": {
+        "operationId": "VotingController_passBallot",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "description": "The secret of a personal voting link.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BallotDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "voting"
+        ]
+      }
+    },
+    "/api/voting/passes/{token}/votes": {
+      "post": {
+        "operationId": "VotingController_passVote",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "description": "The secret of a personal voting link.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CastVoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BallotDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "voting"
+        ]
+      }
+    },
+    "/api/voting/passes/{token}/votes/{project}": {
+      "delete": {
+        "operationId": "VotingController_passWithdraw",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "description": "The secret of a personal voting link.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "project",
+            "required": true,
+            "in": "path",
+            "description": "Project id or fixture id (prj_01).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BallotDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "voting"
+        ]
+      }
+    },
+    "/api/voting/links/{token}/passes": {
+      "post": {
+        "operationId": "VotingController_passFromLink",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "description": "The secret of the shared voting link.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VotingLinkDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "OPEN_LINK: take a personal voting link from the shared one. Rate limited per address.",
+        "tags": [
+          "voting"
+        ]
+      }
+    },
+    "/api/events/{ref}/votes": {
+      "get": {
+        "operationId": "VotingController_status",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicVotingStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "voting"
+        ]
+      }
+    },
+    "/api/events/{ref}/votes/results": {
+      "get": {
+        "operationId": "VotingController_results",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Event id, fixture id (evt_01) or slug.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicVotingResultsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The vote's results, once the organisers publish them after it closes; 404 before.",
+        "tags": [
+          "voting"
+        ]
+      }
     }
   },
   "info": {
@@ -5725,6 +6223,449 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "VotingRoundDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "ACCOUNTS",
+              "EMAIL_LIST",
+              "OPEN_LINK"
+            ]
+          },
+          "opensAt": {
+            "type": "string"
+          },
+          "closesAt": {
+            "type": "string"
+          },
+          "votesPerVoter": {
+            "type": "number"
+          },
+          "open": {
+            "type": "boolean",
+            "description": "True while votes are counted (server clock)."
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "True once the window has passed: results can be published."
+          },
+          "hasLink": {
+            "type": "boolean",
+            "description": "OPEN_LINK: whether a shared link exists (its secret is shown only when it is made)."
+          },
+          "resultsPublishedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "mode",
+          "opensAt",
+          "closesAt",
+          "votesPerVoter",
+          "open",
+          "closed",
+          "hasLink",
+          "resultsPublishedAt"
+        ]
+      },
+      "AdminVoteTallyDto": {
+        "type": "object",
+        "properties": {
+          "repeatVotes": {
+            "type": "number",
+            "description": "Of `votes`, those from ballots taken by an address that took more than one (shared link)."
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string"
+          },
+          "teamName": {
+            "type": "string"
+          },
+          "votes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "repeatVotes",
+          "projectId",
+          "externalId",
+          "title",
+          "teamName",
+          "votes"
+        ]
+      },
+      "VotingAdminDto": {
+        "type": "object",
+        "properties": {
+          "round": {
+            "nullable": true,
+            "description": "Null until the organisers set up a vote.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VotingRoundDto"
+              }
+            ]
+          },
+          "ballots": {
+            "type": "number"
+          },
+          "votes": {
+            "type": "number"
+          },
+          "passes": {
+            "type": "number",
+            "description": "Personal voting links made so far (email list and open link)."
+          },
+          "repeatAddresses": {
+            "type": "number",
+            "description": "Shared link: addresses that took more than one ballot. The addresses are not shown."
+          },
+          "repeatBallots": {
+            "type": "number",
+            "description": "Shared link: the ballots those addresses took."
+          },
+          "tallies": {
+            "description": "Every project in the vote, most votes first. Organisers only until results are published.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminVoteTallyDto"
+            }
+          }
+        },
+        "required": [
+          "round",
+          "ballots",
+          "votes",
+          "passes",
+          "repeatAddresses",
+          "repeatBallots",
+          "tallies"
+        ]
+      },
+      "ConfigureVotingDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "Who may vote: ACCOUNTS (anyone logged in), EMAIL_LIST (a personal link per listed email)\nor OPEN_LINK (a shared link that hands each visitor a personal link).",
+            "enum": [
+              "ACCOUNTS",
+              "EMAIL_LIST",
+              "OPEN_LINK"
+            ]
+          },
+          "opensAt": {
+            "type": "string",
+            "description": "When votes start counting (ISO 8601 with a time zone)."
+          },
+          "closesAt": {
+            "type": "string",
+            "description": "When votes stop counting; after opensAt."
+          },
+          "votesPerVoter": {
+            "type": "number",
+            "description": "How many different projects one voter may vote for (1 to 10).",
+            "minimum": 1,
+            "maximum": 10
+          }
+        },
+        "required": [
+          "mode",
+          "opensAt",
+          "closesAt",
+          "votesPerVoter"
+        ]
+      },
+      "IssuePassesDto": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "description": "The voters' emails; each gets one personal voting link.",
+            "minItems": 1,
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 254
+            }
+          }
+        },
+        "required": [
+          "emails"
+        ]
+      },
+      "IssuedPassDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "description": "The secret for this voter's link, /vote/<token>. Shown once; only its hash is stored."
+          }
+        },
+        "required": [
+          "email",
+          "token"
+        ]
+      },
+      "IssuedPassesDto": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IssuedPassDto"
+            }
+          },
+          "skipped": {
+            "description": "Emails that already had a link (their link is unchanged) or are not email addresses.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "created",
+          "skipped"
+        ]
+      },
+      "VotingLinkDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The shared link's secret, /vote/link/<token>. Shown once; making a new one retires it."
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "BallotProjectDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string"
+          },
+          "tagline": {
+            "type": "string",
+            "nullable": true
+          },
+          "teamName": {
+            "type": "string"
+          },
+          "track": {
+            "type": "string",
+            "nullable": true
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "voted": {
+            "type": "boolean",
+            "description": "This ballot has a vote for it."
+          },
+          "own": {
+            "type": "boolean",
+            "description": "The voter is on this project's team, so cannot vote for it."
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "title",
+          "tagline",
+          "teamName",
+          "track",
+          "thumbnailUrl",
+          "voted",
+          "own"
+        ]
+      },
+      "BallotDto": {
+        "type": "object",
+        "properties": {
+          "eventName": {
+            "type": "string"
+          },
+          "eventSlug": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "ACCOUNTS",
+              "EMAIL_LIST",
+              "OPEN_LINK"
+            ],
+            "type": "string"
+          },
+          "open": {
+            "type": "boolean"
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "True once the window has passed."
+          },
+          "opensAt": {
+            "type": "string"
+          },
+          "closesAt": {
+            "type": "string"
+          },
+          "votesPerVoter": {
+            "type": "number"
+          },
+          "votesLeft": {
+            "type": "number"
+          },
+          "projects": {
+            "description": "In this ballot's own random order, the same every time it is opened.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BallotProjectDto"
+            }
+          }
+        },
+        "required": [
+          "eventName",
+          "eventSlug",
+          "mode",
+          "open",
+          "closed",
+          "opensAt",
+          "closesAt",
+          "votesPerVoter",
+          "votesLeft",
+          "projects"
+        ]
+      },
+      "CastVoteDto": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string",
+            "description": "The project: its id or fixture id.",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "project"
+        ]
+      },
+      "PublicVotingStatusDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "ACCOUNTS",
+              "EMAIL_LIST",
+              "OPEN_LINK"
+            ]
+          },
+          "opensAt": {
+            "type": "string"
+          },
+          "closesAt": {
+            "type": "string"
+          },
+          "open": {
+            "type": "boolean",
+            "description": "True while votes are counted (server clock)."
+          },
+          "resultsPublished": {
+            "type": "boolean",
+            "description": "The results page has something to show."
+          }
+        },
+        "required": [
+          "mode",
+          "opensAt",
+          "closesAt",
+          "open",
+          "resultsPublished"
+        ]
+      },
+      "VotingResultDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string"
+          },
+          "teamName": {
+            "type": "string"
+          },
+          "votes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "projectId",
+          "externalId",
+          "title",
+          "teamName",
+          "votes"
+        ]
+      },
+      "PublicVotingResultsDto": {
+        "type": "object",
+        "properties": {
+          "eventName": {
+            "type": "string"
+          },
+          "closedAt": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string"
+          },
+          "ballots": {
+            "type": "number"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VotingResultDto"
+            }
+          }
+        },
+        "required": [
+          "eventName",
+          "closedAt",
+          "publishedAt",
+          "ballots",
+          "rows"
         ]
       }
     }

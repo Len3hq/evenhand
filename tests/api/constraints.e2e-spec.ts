@@ -157,3 +157,44 @@ describe('comments', () => {
     await expect(row('Fine', { hiddenById: u.id })).rejects.toThrow(/comments_hidden_consistent/);
   });
 });
+
+describe('community voting', () => {
+  it('rejects a backwards window, a bad vote count, a link on a non-link vote, and ballots with no voter or two', async () => {
+    const stamp = String(Date.now());
+    const event = await t.prisma.event.create({
+      data: {
+        slug: `voting-constraints-${stamp}`,
+        name: `Voting constraints ${stamp}`,
+        submissionsClose: new Date('2031-06-01T18:00:00Z'),
+      },
+    });
+    const opensAt = new Date('2031-06-02T00:00:00Z');
+    const closesAt = new Date('2031-06-03T00:00:00Z');
+    const round = (extra: object) =>
+      t.prisma.votingRound.create({
+        data: { eventId: event.id, mode: 'ACCOUNTS', opensAt, closesAt, ...extra },
+      });
+    await expect(round({ closesAt: opensAt })).rejects.toThrow(/voting_rounds_window_valid/);
+    await expect(round({ votesPerVoter: 0 })).rejects.toThrow(
+      /voting_rounds_votes_per_voter_valid/,
+    );
+    await expect(round({ votesPerVoter: 11 })).rejects.toThrow(
+      /voting_rounds_votes_per_voter_valid/,
+    );
+    await expect(round({ linkTokenHash: `hash-${stamp}` })).rejects.toThrow(
+      /voting_rounds_link_only_open/,
+    );
+
+    const ok = await round({});
+    const user = await t.prisma.user.findFirstOrThrow();
+    const pass = await t.prisma.voterPass.create({
+      data: { roundId: ok.id, tokenHash: `pass-${stamp}` },
+    });
+    await expect(t.prisma.ballot.create({ data: { roundId: ok.id } })).rejects.toThrow(
+      /ballots_one_voter/,
+    );
+    await expect(
+      t.prisma.ballot.create({ data: { roundId: ok.id, userId: user.id, passId: pass.id } }),
+    ).rejects.toThrow(/ballots_one_voter/);
+  });
+});

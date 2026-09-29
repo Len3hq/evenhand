@@ -69,6 +69,7 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
     [`${base}/entries`, 'Entries and duplicates', 'Suspected duplicates and disqualifying'],
     [`${base}/results`, 'Results', 'Rank, read the receipt, publish'],
     [`${base}/audit`, 'Audit trail', 'Everything that changed, as sentences'],
+    [`${base}/voting`, 'Community vote', 'A people’s choice, apart from judging'],
   ] as const;
   const sections = [
     ['details', 'Name and dates'],
@@ -100,7 +101,7 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
       </div>
 
       <nav aria-label="Event pages">
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {pages.map(([href, label, hint]) => (
             <li key={href}>
               <Link

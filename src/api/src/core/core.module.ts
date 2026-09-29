@@ -10,6 +10,7 @@ import {
   IMAGE_RATE_LIMIT,
   REVIEW_RATE_LIMIT,
   UPLOAD_RATE_LIMIT,
+  VOTE_RATE_LIMIT,
 } from './auth/decorators.js';
 import { RoleGuard } from './auth/role.guard.js';
 import { SessionGuard } from './auth/session.guard.js';
@@ -80,6 +81,13 @@ const marked = (key: string, ctx: ExecutionContext): boolean =>
           ttl: MINUTE_MS,
           limit: config.rateLimitCommentPerMin,
           skipIf: (ctx) => !marked(COMMENT_RATE_LIMIT, ctx),
+          generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
+        },
+        {
+          name: 'vote',
+          ttl: MINUTE_MS,
+          limit: config.rateLimitVotePerMin,
+          skipIf: (ctx) => !marked(VOTE_RATE_LIMIT, ctx),
           generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
         },
         {

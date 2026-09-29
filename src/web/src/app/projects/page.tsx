@@ -59,6 +59,15 @@ export default async function GalleryPage({ searchParams }: PageProps<'/projects
 
   // The event the gallery is filtered to, if any: its status and, once published, its results.
   const selected = events.find((e) => e.slug === query.get('event'));
+  // Its community vote, if it has one: a link to vote while it is open, and to its results.
+  let vote: Schemas['PublicVotingStatusDto'] | null = null;
+  if (selected) {
+    try {
+      vote = await apiGet<Schemas['PublicVotingStatusDto']>(`/api/events/${selected.slug}/votes`);
+    } catch (e) {
+      if (!(e instanceof ApiError && e.status === 404)) throw e;
+    }
+  }
 
   return (
     <section className="space-y-6">
@@ -98,6 +107,26 @@ export default async function GalleryPage({ searchParams }: PageProps<'/projects
               className="font-medium text-accent underline underline-offset-4"
             >
               See the published results →
+            </Link>
+          ) : null}
+          {vote?.open ? (
+            vote.mode === 'ACCOUNTS' ? (
+              <Link
+                href={`/events/${selected!.slug}/vote`}
+                className="font-medium text-accent underline underline-offset-4"
+              >
+                Vote for your favourites →
+              </Link>
+            ) : (
+              <span className="text-muted">Community vote open (by personal link)</span>
+            )
+          ) : null}
+          {vote?.resultsPublished ? (
+            <Link
+              href={`/events/${selected!.slug}/vote/results`}
+              className="font-medium text-accent underline underline-offset-4"
+            >
+              Community vote →
             </Link>
           ) : null}
           <Link href="/projects" className="text-muted underline underline-offset-4">
