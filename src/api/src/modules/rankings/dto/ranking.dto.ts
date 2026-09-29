@@ -19,6 +19,18 @@ export class RankingRowDto {
   reason: string;
 }
 
+/** A suspected duplicate still waiting for the organisers' decision when the run was made. */
+export class PendingDuplicateDto {
+  flagId: string;
+  reason: 'SAME_TEAM' | 'SAME_REPO' | 'SAME_TITLE';
+  /** The newer entry (kept if confirmed). */
+  kept: string;
+  /** The older entry. While held (same team), it is out of judging and its reviews are not ranked. */
+  held: string;
+  /** Final reviews of the older entry that this run could not use. */
+  heldOutReviews: number;
+}
+
 export class RankingParamsDto {
   method: string;
   weights: Record<string, number>;
@@ -32,6 +44,12 @@ export class RankingParamsDto {
   reviews: number;
   /** Projects in judging with no final review; not in the ranking. */
   unreviewed: string[];
+  /**
+   * Duplicates not yet decided when the run was made. A run can be computed with some pending,
+   * but not published (409 `duplicates_pending`): decide them on the entries page first.
+   * Absent on runs made before this was recorded.
+   */
+  pendingDuplicates?: PendingDuplicateDto[];
 }
 
 export class RankingSummaryDto {

@@ -182,3 +182,52 @@ describe('the fixture event', () => {
     expect(lines[1]).toMatch(/^1,1,prj_11,Salt Ledger,/);
   });
 });
+
+describe('undecided duplicates', () => {
+  it('records them in the run and refuses to publish until they are decided', async () => {
+    const s = await judgedEvent(t, { assigned: true });
+    await judgeEverything(s);
+    // Two live projects flagged as a possible duplicate (different teams, same title).
+    const [a, b] = s.gamesProjects;
+    const flag = await t.prisma.duplicateFlag.create({
+      data: { eventId: s.ev.id, keptId: b!.id, supersededId: a!.id, reason: 'SAME_TITLE' },
+    });
+
+    // Other suites count the fixture event's one flag across the whole database: remove ours after.
+    onTestFinished(() =>
+      t.prisma.duplicateFlag.deleteMany({ where: { id: flag.id } }).then(() => {}),
+    );
+
+    const ranking = (await run(s.ev.slug)).body;
+    expect(ranking.params.pendingDuplicates).toEqual([
+      expect.objectContaining({ flagId: flag.id, reason: 'SAME_TITLE', heldOutReviews: 0 }),
+    ]);
+    const refused = await publish(ranking.id);
+    expect(refused.status).toBe(409);
+    expect(refused.body.error).toBe('duplicates_pending');
+
+    // Decided (dismissed: different teams): a fresh run publishes.
+    expect((await t.http().post(`/api/duplicates/${flag.id}/dismiss`).set(organizer)).status).toBe(
+      200,
+    );
+    const fresh = (await run(s.ev.slug)).body;
+    expect(fresh.params.pendingDuplicates).toEqual([]);
+    expect((await publish(fresh.id)).status).toBe(200);
+  });
+
+  it('counts the reviews a held copy keeps out of the fixture event’s ranking', async () => {
+    const pending = await t.prisma.duplicateFlag.findFirst({
+      where: { status: 'PENDING', superseded: { externalId: 'prj_07' } },
+    });
+    // Another suite may have decided Dry Harbour already; the rule is only visible while pending.
+    if (!pending) return;
+    const res = await run('evt_01');
+    expect(res.body.params.pendingDuplicates).toEqual([
+      expect.objectContaining({
+        reason: 'SAME_TEAM',
+        held: 'Dry Harbour (prj_07)',
+        heldOutReviews: 5,
+      }),
+    ]);
+  });
+});

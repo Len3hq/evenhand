@@ -177,7 +177,7 @@ export default async function EventSettingsPage({ params }: PageProps<'/organize
             title="Assignment"
             intro="Gives each submitted project the chosen number of judges from its track: least-busy judge first, never a conflict of interest, random where it is a tie. Run it after submissions close, and again after inviting more judges."
           >
-            <AssignmentPanel eventId={event.id} />
+            <AssignmentPanel eventId={event.id} submissionsOpen={event.submissionsOpen} />
           </Section>
 
           <Section id="organisers" title="Organisers">

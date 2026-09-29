@@ -44,6 +44,8 @@ export function RankingPanel({
   }
 
   const p = latest?.params;
+  // Recorded by the run; decided flags need a fresh run to clear it (the API checks again on publish).
+  const pending = p?.pendingDuplicates ?? [];
   const gain = p && p.meanOnlyLooMse > 0 ? (1 - p.looMse / p.meanOnlyLooMse) * 100 : null;
   const groups = latest
     ? new Set(latest.rows.flatMap((r) => (r.tieGroup ? [r.tieGroup] : []))).size
@@ -63,7 +65,7 @@ export function RankingPanel({
           <Button
             type="button"
             variant="secondary"
-            disabled={busy || !latest.current}
+            disabled={busy || !latest.current || pending.length > 0}
             onClick={() => {
               if (window.confirm('Publish this ranking? It becomes the public results.')) {
                 void act(() => apiPost(`/api/rankings/${latest.id}/publish`));
@@ -98,6 +100,31 @@ export function RankingPanel({
               <Badge tone="warning">Out of date: reviews or weights changed. Run it again.</Badge>
             )}
           </div>
+          {pending.length > 0 ? (
+            <div role="alert" className="rounded-lg border border-warning p-3 text-sm">
+              <p className="font-medium text-warning">
+                {pending.length} suspected duplicate{pending.length === 1 ? '' : 's'} still to
+                decide: publishing is blocked until {pending.length === 1 ? 'it is' : 'they are'}.
+              </p>
+              <ul className="mt-1 list-disc pl-5 text-muted">
+                {pending.map((d) => (
+                  <li key={d.flagId}>
+                    {d.held} / {d.kept}
+                    {d.heldOutReviews > 0
+                      ? `: ${d.heldOutReviews} review${d.heldOutReviews === 1 ? '' : 's'} of the older copy are not in this ranking`
+                      : ''}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href={`/organizer/events/${eventSlug}/entries`}
+                className="mt-1 inline-block underline"
+              >
+                Decide on the entries page
+              </Link>
+              , then run the ranking again.
+            </div>
+          ) : null}
           <p className="text-sm text-muted">
             {latest.rows.filter((r) => r.rank !== null).length} projects ranked in {groups} tie
             group{groups === 1 ? '' : 's'} from {p?.reviews} reviews (λ_b {p?.lambdaB}, λ_q{' '}

@@ -12,6 +12,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { manageableEvent } from '../events/manageable-event.js';
 import { IN_JUDGING } from '../judging/in-judging.js';
 import type {
+  PendingDuplicateDto,
   PublicResultsDto,
   RankingDto,
   RankingParamsDto,
@@ -117,6 +118,7 @@ export class RankingsService {
       })),
     ];
     const reviewed = new Set(fit.projects.map((p) => p.projectId));
+    const pendingDuplicates = await this.pendingDuplicates(event.id);
     const params: RankingParamsDto = {
       method: METHOD,
       weights: Object.fromEntries(inputs.criteria.map((c) => [c.key, c.weight])),
@@ -130,6 +132,7 @@ export class RankingsService {
         .map((p) => p.id)
         .filter((id) => !reviewed.has(id))
         .sort(),
+      pendingDuplicates,
     };
     const inputsHash = hash(inputs);
     const outputHash = hash(
@@ -199,6 +202,18 @@ export class RankingsService {
    */
   async publish(actor: Actor, runId: string): Promise<RankingDto> {
     const run = await this.ownRun(actor, runId);
+    // An undecided duplicate means some reviews are set aside (a held copy) or a project may be
+    // counted twice (two live copies). Results go public only once every flag is decided.
+    const pending = await this.pendingDuplicates(run.eventId);
+    if (pending.length) {
+      throw new DomainError(
+        HttpStatus.CONFLICT,
+        'duplicates_pending',
+        `Decide the suspected duplicate${pending.length === 1 ? '' : 's'} first (${pending
+          .map((p) => `${p.held} / ${p.kept}`)
+          .join('; ')}), then run the ranking again and publish.`,
+      );
+    }
     if (hash(await this.inputsOf(run.eventId)) !== run.inputsHash) {
       throw new DomainError(
         HttpStatus.CONFLICT,
@@ -300,6 +315,37 @@ export class RankingsService {
       run.publishedAt !== null,
     ]);
     return { filename: `${event.slug}-results.csv`, csv: toCsv(header, cells) };
+  }
+
+  /** Undecided duplicate flags, and how many final reviews each held copy keeps out of a run. */
+  private async pendingDuplicates(eventId: string): Promise<PendingDuplicateDto[]> {
+    const flags = await this.prisma.duplicateFlag.findMany({
+      where: { eventId, status: 'PENDING' },
+      include: {
+        kept: { select: { externalId: true, title: true } },
+        superseded: { select: { id: true, externalId: true, title: true, duplicateHold: true } },
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    const label = (s: { externalId: string | null; title: string }) =>
+      s.externalId ? `${s.title} (${s.externalId})` : s.title;
+    return Promise.all(
+      flags.map(async (f) => ({
+        flagId: f.id,
+        reason: f.reason,
+        kept: label(f.kept),
+        held: label(f.superseded),
+        heldOutReviews: f.superseded.duplicateHold
+          ? await this.prisma.review.count({
+              where: {
+                status: 'FINAL',
+                superseded: false,
+                assignment: { submissionId: f.superseded.id },
+              },
+            })
+          : 0,
+      })),
+    );
   }
 
   /** Deny first: someone who organises nothing is refused before the run is looked up. */

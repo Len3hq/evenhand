@@ -10,7 +10,14 @@ import type { Schemas } from '@/lib/api/types';
  * Runs assignment and says what it did. Safe to run again: it only tops projects up (after new
  * judges join or late changes), and never moves work that already exists.
  */
-export function AssignmentPanel({ eventId }: { eventId: string }) {
+export function AssignmentPanel({
+  eventId,
+  submissionsOpen,
+}: {
+  eventId: string;
+  /** From the API (server clock): teams can still edit their entries. */
+  submissionsOpen: boolean;
+}) {
   const router = useRouter();
   const [result, setResult] = useState<Schemas['AssignmentRunDto'] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +44,13 @@ export function AssignmentPanel({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-4">
+      {submissionsOpen ? (
+        <p role="note" className="rounded-lg border border-warning p-3 text-sm">
+          <span className="font-medium text-warning">Submissions are still open.</span> Teams can
+          edit their entries until the deadline, so a judge may score a version that later changes.
+          Usually, run assignment after submissions close.
+        </p>
+      ) : null}
       <form onSubmit={onRun} className="flex flex-wrap items-end gap-3">
         <label className="flex items-center gap-2 text-sm">
           Reviews per project

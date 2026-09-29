@@ -185,6 +185,22 @@ await step('rank the fixture event, publish it, and a visitor sees the results',
   await page.click('button:has-text("Run ranking")');
   // As in docs/proof/normalization.md: 40 projects, 2 tie groups.
   await page.getByText(/40 projects ranked in 2 tie groups/).waitFor();
+  // The planted duplicate is still undecided, so publishing is blocked, with the reason.
+  await page.getByText(/suspected duplicate still to decide/).waitFor();
+  if (await page.locator('button:has-text("Publish these results")').isEnabled()) {
+    throw new Error('publishing must be blocked while a duplicate is undecided');
+  }
+
+  // Decide it, rank again with the merged reviews, publish.
+  await page.goto(`${BASE}/organizer/events/evt_01/entries`);
+  const card = page.getByRole('article', { name: 'Dry Harbour' });
+  await card.locator('button:has-text("Confirm: keep the newer copy")').click();
+  await card.getByText(/Confirmed by Demo Organizer/).waitFor();
+  await page.goto(`${BASE}/organizer/events/evt_01`);
+  await page.click('main >> text=Results');
+  await page.getByRole('heading', { name: 'Ranking and results' }).waitFor();
+  await page.click('button:has-text("Run ranking")');
+  await page.locator('button:has-text("Publish these results"):enabled').waitFor();
   await page.click('button:has-text("Publish these results")');
   await page.getByText(/^Published /).waitFor();
 
@@ -192,6 +208,11 @@ await step('rank the fixture event, publish it, and a visitor sees the results',
   await visitor.goto(`${BASE}/events/evt_01/results`);
   await visitor.getByRole('heading', { name: 'Sample Hack 2026: results' }).waitFor();
   await visitor.getByText('Salt Ledger').waitFor();
+
+  // Back to undecided, for the duplicate check that follows.
+  await page.goto(`${BASE}/organizer/events/evt_01/entries`);
+  await card.locator('button:has-text("Undo")').click();
+  await card.getByText('Waiting for your decision').waitFor();
   await page.goto(back);
 });
 
