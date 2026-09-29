@@ -1,0 +1,14 @@
+# Every text file is LF in the repository and in every checkout, on every platform.
+# On Windows, Git's default (core.autocrlf=true) would otherwise check shell scripts out with
+# CRLF endings: docker/api-entrypoint.sh is copied into the api image, and with CRLF the
+# container cannot start, so `docker compose up` would fail. LF everywhere also keeps Prisma's
+# migration checksums identical on every machine.
+* text=auto eol=lf
+
+# Binary, never touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff2 binary

@@ -59,7 +59,10 @@ COPY src/api/prisma src/api/prisma
 COPY --from=build /app/src/api/dist src/api/dist
 COPY data/fixtures.json data/fixtures.json
 COPY docker/api-entrypoint.sh /usr/local/bin/api-entrypoint.sh
-RUN chmod 0755 /usr/local/bin/api-entrypoint.sh \
+# Strip Windows line endings in case the file arrived with CRLF (a zip download, an editor):
+# `#!/bin/sh\r` cannot start. .gitattributes already keeps git checkouts LF.
+RUN sed -i 's/\r$//' /usr/local/bin/api-entrypoint.sh \
+ && chmod 0755 /usr/local/bin/api-entrypoint.sh \
  && mkdir -p /app/uploads \
  && chown -R node:node /app/uploads
 USER node
