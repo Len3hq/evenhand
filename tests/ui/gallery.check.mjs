@@ -1,5 +1,6 @@
 // The public gallery in a real browser, logged out: search, then filter by event and track.
 // Run with `npm run test:ui`.
+/* global document -- used inside page callbacks, which run in the browser */
 import { BASE, finish, openBrowser, step } from './harness.mjs';
 
 const { browser, newPage } = await openBrowser();
@@ -39,6 +40,21 @@ await step('search within the filters, then clear them', async () => {
   await page.click('text=Clear the search and filters');
   await page.waitForURL(`${BASE}/projects`);
   await page.getByText('Glass Signal').first().waitFor();
+});
+
+await step('results follow as you type, without pressing Search', async () => {
+  await page.goto(`${BASE}/projects`);
+  await page.locator('#q').pressSequentially('Glass Sig', { delay: 40 });
+  await page.waitForURL(/[?&]q=Glass(\+|%20)Sig/);
+  await page.getByText('Glass Signal').first().waitFor();
+  if (await page.getByText('Small Meadow').count()) throw new Error('the search did not filter');
+  // The box keeps its focus and what was typed while the results change.
+  if ((await page.locator('#q').inputValue()) !== 'Glass Sig') throw new Error('typing was lost');
+  if (!(await page.locator('#q').evaluate((el) => el === document.activeElement))) {
+    throw new Error('the search box lost focus');
+  }
+  await page.locator('#q').fill('');
+  await page.waitForURL(`${BASE}/projects`);
 });
 
 await step('a project page says how it is judged', async () => {

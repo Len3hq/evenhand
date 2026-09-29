@@ -6,7 +6,7 @@
  * text (badges, labels, figures). Colours only from the tokens in app/globals.css.
  */
 import Link from 'next/link';
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ComponentProps, ReactNode } from 'react';
 
 const cx = (...classes: (string | false | null | undefined)[]): string =>
   classes.filter(Boolean).join(' ');
@@ -58,7 +58,8 @@ export function ButtonLink({
   );
 }
 
-export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+// ComponentProps includes `ref`, which React 19 passes like any other prop (the gallery search).
+export function Input({ className, ...props }: ComponentProps<'input'>) {
   return (
     <input
       className={cx(

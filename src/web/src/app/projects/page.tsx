@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ProjectCard } from '@/components/gallery/project-card';
-import { Badge, Button, ButtonLink, EmptyState, ErrorState, Input } from '@/components/ui';
+import { GalleryFilters } from '@/components/gallery/gallery-filters';
+import { Badge, ButtonLink, EmptyState, ErrorState } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
 import type { Schemas } from '@/lib/api/types';
 import { formatUtc } from '@/lib/dates';
@@ -10,9 +11,6 @@ import { formatUtc } from '@/lib/dates';
 // must not need the API.
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Gallery' };
-
-const select =
-  'rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-accent';
 
 const first = (v: string | string[] | undefined): string | undefined =>
   Array.isArray(v) ? v[0] : v;
@@ -66,63 +64,21 @@ export default async function GalleryPage({ searchParams }: PageProps<'/projects
     <section className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-3xl font-bold tracking-tight">Gallery</h1>
-        <p className="text-sm text-muted">
+        {/* Announced when it changes, so a screen reader hears what live search found. */}
+        <p className="text-sm text-muted" aria-live="polite">
           {data.total} project{data.total === 1 ? '' : 's'}
           {q ? ` matching “${q}”` : ''}
         </p>
       </div>
 
-      <form
-        action="/projects"
-        method="get"
-        role="search"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3"
-      >
-        <label htmlFor="q" className="sr-only">
-          Search projects
-        </label>
-        <Input
-          id="q"
-          name="q"
-          type="search"
-          defaultValue={q}
-          placeholder="Search by title, tagline or summary"
-          className="min-w-0 flex-1 basis-56"
-        />
-        <label htmlFor="event" className="sr-only">
-          Event
-        </label>
-        <select id="event" name="event" defaultValue={query.get('event') ?? ''} className={select}>
-          <option value="">All events</option>
-          {events.map((e) => (
-            <option key={e.id} value={e.slug}>
-              {e.name}
-            </option>
-          ))}
-        </select>
-        {tracks.length ? (
-          <>
-            <label htmlFor="track" className="sr-only">
-              Track
-            </label>
-            <select
-              id="track"
-              name="track"
-              defaultValue={query.get('track') ?? ''}
-              className={select}
-            >
-              <option value="">All tracks</option>
-              {tracks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </>
-        ) : null}
-        {tag ? <input type="hidden" name="tag" value={tag} /> : null}
-        <Button type="submit">Search</Button>
-      </form>
+      <GalleryFilters
+        q={q}
+        event={query.get('event') ?? ''}
+        events={events.map((e) => ({ slug: e.slug, name: e.name }))}
+        track={query.get('track') ?? ''}
+        tracks={tracks.map((t) => ({ id: t.id, name: t.name }))}
+        tag={tag}
+      />
 
       {selected || tag ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
