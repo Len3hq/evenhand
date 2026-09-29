@@ -45,6 +45,7 @@ Every design decision worth defending has its own record in [`docs/decisions/`](
 - [Duplicate decisions and disqualification](docs/decisions/20260928-0812-a-duplicate-decisions-and-disqualification.md): a merge rule worked out from the data, undoable row for row.
 - [A readable audit trail](docs/decisions/20260927-1454-a-readable-audit-trail.md): one sentence per entry, for organisers who have never seen the schema.
 - [Audit hash chain](docs/decisions/20260928-1900-a-audit-hash-chain.md): the database links and hashes every audit entry, so tampering with the log, even in SQL, is detected.
+- [Audit anchor and scored version](docs/decisions/20260929-1200-a-audit-anchor-and-scored-version.md): published results pin the chain's head publicly; every review records the version it scored.
 - [Events are exported in the organisers' fixtures.json shape](docs/decisions/20260927-1513-a-export-in-the-shared-shape.md): so any portal from this event can read our export.
 
 ## Designs we rejected
