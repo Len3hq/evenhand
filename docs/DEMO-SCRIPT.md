@@ -5,7 +5,7 @@ The rules ask for one full event lifecycle: **create, submit, judge, publish**. 
 ## Before recording
 
 ```sh
-docker compose down -v && docker compose up -d --wait   # fresh, seeded stack
+docker compose down -v && docker compose up -d --build --wait   # fresh, seeded stack on the current code
 ```
 
 Every account's password is `evenhand-demo`. Use three browser profiles (or one normal window and two private ones) so the organiser, participant and judge stay logged in side by side:
