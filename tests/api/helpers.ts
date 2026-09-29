@@ -48,11 +48,17 @@ export async function createTestApp(
   const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({ logger: false });
   configureApp(app);
-  await app.init();
+  // Listen once on 127.0.0.1 explicitly. Handing supertest the bare server makes it listen on
+  // a fresh port per request on every interface, then connect to 127.0.0.1; on macOS another
+  // process can hold that port number on 127.0.0.1 alone, and the request lands there instead
+  // (random 404s and 400s from a stranger).
+  await app.listen(0, '127.0.0.1');
+  const { port } = app.getHttpServer().address() as { port: number };
+  const base = `http://127.0.0.1:${port}`;
   return {
     app,
     prisma: app.get(PrismaService),
-    http: () => request(app.getHttpServer()),
+    http: () => request(base),
     close: () => app.close(),
   };
 }
