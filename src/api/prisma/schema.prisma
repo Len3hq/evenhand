@@ -34,12 +34,14 @@ model User {
   isAdmin      Boolean  @default(false) @map("is_admin")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  sessions     Session[]
-  apiTokens    ApiToken[]
-  eventRoles   EventRole[]
-  teamMembers  TeamMember[]
-  auditEntries AuditLog[]
-  judgeInvites JudgeInvite[]
+  sessions       Session[]
+  apiTokens      ApiToken[]
+  eventRoles     EventRole[]
+  teamMembers    TeamMember[]
+  auditEntries   AuditLog[]
+  judgeInvites   JudgeInvite[]
+  comments       Comment[]     @relation("CommentAuthor")
+  hiddenComments Comment[]     @relation("CommentHiddenBy")
 
   @@map("users")
 }
@@ -326,6 +328,7 @@ model Submission {
   duplicateFlags DuplicateFlag[]   @relation("DuplicateSuperseded")
   movedReviews   Review[]          @relation("ReviewOriginalSubmission")
   rankingRows    RankingRow[]
+  comments       Comment[]
 
   @@unique([eventId, externalId])
   @@index([eventId, status, eligibility])
@@ -426,8 +429,8 @@ model DuplicateFlag {
 
 /// A judge may not be assigned to a team they have a conflict with.
 model ConflictOfInterest {
-  judgeRoleId String @map("judge_role_id") @db.Uuid
-  teamId      String @map("team_id") @db.Uuid
+  judgeRoleId String  @map("judge_role_id") @db.Uuid
+  teamId      String  @map("team_id") @db.Uuid
   reason      String?
 
   judgeRole EventRole @relation(fields: [judgeRoleId], references: [id], onDelete: Cascade)
@@ -563,4 +566,28 @@ model AuditLog {
   @@index([eventId, at])
   @@index([actorId])
   @@map("audit_log")
+}
+
+// ─── Community ────────────────────────────────────────────────────────────────
+
+/// A comment on a project in the public gallery (T3). Anyone logged in may post on a public
+/// project; the event's organisers can hide one, with a reason, and restore it. Hidden comments
+/// are kept, never deleted, so moderation is reversible and auditable. The body length is
+/// checked in the database too (migration).
+model Comment {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  submissionId String    @map("submission_id") @db.Uuid
+  authorId     String    @map("author_id") @db.Uuid
+  body         String
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  hiddenAt     DateTime? @map("hidden_at") @db.Timestamptz(3)
+  hiddenById   String?   @map("hidden_by_id") @db.Uuid
+  hideReason   String?   @map("hide_reason")
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  author     User       @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  hiddenBy   User?      @relation("CommentHiddenBy", fields: [hiddenById], references: [id], onDelete: SetNull)
+
+  @@index([submissionId, createdAt])
+  @@map("comments")
 }

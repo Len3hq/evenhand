@@ -2516,6 +2516,153 @@
           "images"
         ]
       }
+    },
+    "/api/projects/{ref}/comments": {
+      "get": {
+        "operationId": "CommentsController_list",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Project id or fixture id (prj_01).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommentDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "A public project's comments, oldest first. Visitors see visible comments only; the event's\norganisers also see hidden ones, marked, with the reason. 404 for a project not in the gallery.",
+        "tags": [
+          "comments"
+        ]
+      },
+      "post": {
+        "operationId": "CommentsController_post",
+        "parameters": [
+          {
+            "name": "ref",
+            "required": true,
+            "in": "path",
+            "description": "Project id or fixture id (prj_01).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostCommentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Comment on a public project. Anyone logged in; rate limited per address; audited.",
+        "tags": [
+          "comments"
+        ]
+      }
+    },
+    "/api/comments/{id}/hide": {
+      "post": {
+        "operationId": "CommentsController_hide",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HideCommentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hide a comment, with a reason. The event's organisers and admins; reversible.",
+        "tags": [
+          "comments"
+        ]
+      }
+    },
+    "/api/comments/{id}/restore": {
+      "post": {
+        "operationId": "CommentsController_restore",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Show a hidden comment again. The event's organisers and admins.",
+        "tags": [
+          "comments"
+        ]
+      }
     }
   },
   "info": {
@@ -5504,6 +5651,80 @@
         },
         "required": [
           "order"
+        ]
+      },
+      "CommentAuthorDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The author's display name. Their email is never shown with a comment."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CommentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/CommentAuthorDto"
+          },
+          "body": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "True only in an organiser's view: visitors never receive hidden comments."
+          },
+          "hideReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "The organiser's reason, in an organiser's view of a hidden comment; otherwise null."
+          }
+        },
+        "required": [
+          "id",
+          "author",
+          "body",
+          "createdAt",
+          "hidden",
+          "hideReason"
+        ]
+      },
+      "PostCommentDto": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "description": "1 to 2,000 characters; shown as plain text.",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "HideCommentDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Why it is hidden: recorded in the audit trail and shown to the event's organisers.",
+            "minLength": 3,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "reason"
         ]
       }
     }

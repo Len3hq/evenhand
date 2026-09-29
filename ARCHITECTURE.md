@@ -69,6 +69,7 @@ Each module under `src/api/src/modules/` is a controller (thin), a service (the 
 | `judges`      | Judge invite links, judges' tracks, removal                                                                             |
 | `judging`     | The rubric, assignment, the judge console (reviews), progress, judges' scores and the scores CSV; the "in judging" rule |
 | `rankings`    | Ranking runs with their receipts, publishing, public results, results CSV                                               |
+| `comments`    | Comments on public projects, and their moderation (hide with a reason, restore)                                         |
 | `integrity`   | Suspected duplicates (confirm, dismiss, reopen), disqualification, the entries list                                     |
 | `audit`       | The readable event and platform trails, audit CSV                                                                       |
 | `exports`     | Teams, submissions and assignments CSVs                                                                                 |
@@ -111,6 +112,7 @@ Environment variables, validated at start-up (`core/config.ts`; a bad value stop
 | `ALLOWED_ORIGINS`                                         | `http://localhost:8080`       | Origins allowed to make cookie-authenticated writes                                                                                                   |
 | `RATE_LIMIT_DEFAULT_PER_MIN` / `RATE_LIMIT_LOGIN_PER_MIN` | `300` / `10`                  | Per-IP limits                                                                                                                                         |
 | `RATE_LIMIT_EXPORT_PER_MIN` / `RATE_LIMIT_REVIEW_PER_MIN` | `30` / `120`                  | Exports (all CSVs and the event JSON, one counter) and judge review writes, per IP                                                                    |
+| `RATE_LIMIT_COMMENT_PER_MIN`                              | `10`                          | Comments posted per IP                                                                                                                                |
 | `RATE_LIMIT_UPLOAD_PER_MIN` / `RATE_LIMIT_IMAGE_PER_MIN`  | `30` / `3000`                 | Image uploads (each is re-encoded), and image downloads, which have their own limit instead of the default one (a gallery page loads many thumbnails) |
 | `AUTH_FAILURES_PER_MIN`                                   | `20`                          | Failed token or session checks per IP before it is refused (429) for the rest of the minute                                                           |
 | `SESSION_TTL_HOURS`                                       | `168`                         | Browser session lifetime                                                                                                                              |

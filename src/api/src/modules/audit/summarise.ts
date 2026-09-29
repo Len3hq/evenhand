@@ -95,6 +95,12 @@ export function summarise(entry: Describable, actor: Who, target: string | null)
       return `${who} removed an image from ${it}`;
     case 'submission.images_reordered':
       return `${who} reordered the images of ${it}`;
+    case 'comment.posted':
+      return `${who} commented on ${it}`;
+    case 'comment.hidden':
+      return `${who} hid a comment on ${it}: ${str(after.reason)}`;
+    case 'comment.restored':
+      return `${who} restored a hidden comment on ${it}`;
     case 'fixtures.imported':
       return `${who} imported the event from fixtures.json`;
     case 'demo.seeded':

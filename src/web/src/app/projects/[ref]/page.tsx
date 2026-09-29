@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Answers } from '@/components/gallery/answers';
+import { Comments } from '@/components/gallery/comments';
 import { ProjectImages } from '@/components/gallery/project-images';
 import { Badge, Card, ErrorState, ProjectTile } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
 import type { Schemas } from '@/lib/api/types';
+import { currentUser } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,10 +27,17 @@ export default async function ProjectPage({ params }: PageProps<'/projects/[ref]
 
   // The rubric and the event are public: show how this project is judged and where it was
   // entered (nothing for either if it cannot be loaded).
-  const [rubric, event] = await Promise.all([
+  const [rubric, event, comments, me] = await Promise.all([
     apiGet<Schemas['RubricDto']>(`/api/events/${project.eventId}/criteria`).catch(() => null),
     apiGet<Schemas['EventDto']>(`/api/events/${project.eventId}`).catch(() => null),
+    apiGet<Schemas['CommentDto'][]>(`/api/projects/${project.id}/comments`).catch(() => []),
+    currentUser(),
   ]);
+  // Only decides which buttons to show; the API checks every hide and restore itself.
+  const moderator = Boolean(
+    me &&
+    (me.isAdmin || me.roles.some((r) => r.role === 'ORGANIZER' && r.eventId === project.eventId)),
+  );
 
   const links = [
     ['Repository', project.repoUrl],
@@ -79,6 +88,15 @@ export default async function ProjectPage({ params }: PageProps<'/projects/[ref]
             <p className="mt-4 whitespace-pre-line">{project.description}</p>
           ) : null}
           <Answers answers={project.answers} className="mt-6 border-t border-border pt-4" />
+          <div className="mt-10 border-t border-border pt-6">
+            <Comments
+              projectId={project.id}
+              comments={comments}
+              loggedIn={me !== null}
+              moderator={moderator}
+              loginHref={`/login?next=${encodeURIComponent(`/projects/${ref}`)}`}
+            />
+          </div>
         </div>
 
         <aside className="space-y-4">

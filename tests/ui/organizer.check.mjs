@@ -198,6 +198,28 @@ await step('rank the fixture event, publish it, and a visitor sees the results',
 /** Status of a public API call made by the page itself (same origin as a visitor). */
 const statusOf = (path) => page.evaluate((p) => fetch(p).then((r) => r.status), path);
 
+await step('hide a comment with a reason, then restore it', async () => {
+  const text = `Moderation check ${Date.now()}`;
+  await page.goto(`${BASE}/projects/prj_01`);
+  await page.fill('#comment-body', text);
+  await page.click('button:has-text("Post comment")');
+  const item = page.locator('li', { hasText: text });
+  await item.waitFor();
+  await item.locator('button:has-text("Hide…")').click();
+  await item.locator('input').fill('Off topic');
+  await item.getByRole('button', { name: 'Hide', exact: true }).click();
+  await item.getByText('Hidden: Off topic').waitFor();
+  const visitor = await newPage();
+  await visitor.goto(`${BASE}/projects/prj_01`);
+  await visitor.getByRole('heading', { name: /Comments/ }).waitFor();
+  if (await visitor.getByText(text).count())
+    throw new Error('a visitor still sees the hidden comment');
+  await item.locator('button:has-text("Restore")').click();
+  await item.getByText('Hidden: Off topic').waitFor({ state: 'detached' });
+  await visitor.reload();
+  await visitor.getByText(text).waitFor();
+});
+
 await step('confirm the planted duplicate, see where its reviews went, then undo it', async () => {
   await page.goto(`${BASE}/organizer/events/evt_01/entries`);
   await page.getByRole('heading', { name: 'Entries and duplicates' }).waitFor();

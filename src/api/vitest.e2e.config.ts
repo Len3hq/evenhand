@@ -25,6 +25,7 @@ const e2eEnv = {
   AUTH_FAILURES_PER_MIN: '10000',
   RATE_LIMIT_UPLOAD_PER_MIN: '10000',
   RATE_LIMIT_IMAGE_PER_MIN: '10000',
+  RATE_LIMIT_COMMENT_PER_MIN: '10000',
   // Uploaded files go to a folder of their own, never a developer's ./uploads.
   UPLOADS_DIR: join(tmpdir(), 'evenhand-e2e-uploads'),
 };

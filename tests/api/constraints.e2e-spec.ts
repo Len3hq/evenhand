@@ -145,3 +145,15 @@ describe('submission_images', () => {
     await expect(row(10, 10, -1)).rejects.toThrow(/submission_images_order_valid/);
   });
 });
+
+describe('comments', () => {
+  it('rejects a blank or overlong comment, and a hider on a visible comment', async () => {
+    const s = await t.prisma.submission.findFirstOrThrow();
+    const u = await t.prisma.user.findFirstOrThrow();
+    const row = (body: string, extra = {}) =>
+      t.prisma.comment.create({ data: { submissionId: s.id, authorId: u.id, body, ...extra } });
+    await expect(row('   ')).rejects.toThrow(/comments_body_valid/);
+    await expect(row('x'.repeat(2001))).rejects.toThrow(/comments_body_valid/);
+    await expect(row('Fine', { hiddenById: u.id })).rejects.toThrow(/comments_hidden_consistent/);
+  });
+});

@@ -50,6 +50,8 @@ export const ERROR_CODES = [
   'unsupported_image',
   'payload_too_large',
   'too_many_images',
+  'comment_already_hidden',
+  'comment_not_hidden',
   'team_name_taken',
   'invite_expired',
   'invite_used_up',

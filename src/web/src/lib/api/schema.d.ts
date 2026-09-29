@@ -1122,6 +1122,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{ref}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A public project's comments, oldest first. Visitors see visible comments only; the event's
+         *     organisers also see hidden ones, marked, with the reason. 404 for a project not in the gallery.
+         */
+        get: operations["CommentsController_list"];
+        put?: never;
+        /** Comment on a public project. Anyone logged in; rate limited per address; audited. */
+        post: operations["CommentsController_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/comments/{id}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hide a comment, with a reason. The event's organisers and admins; reversible. */
+        post: operations["CommentsController_hide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/comments/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Show a hidden comment again. The event's organisers and admins. */
+        post: operations["CommentsController_restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1939,6 +1994,28 @@ export interface components {
         ReorderImagesDto: {
             /** @description Every image id of the submission, in the new order; the first becomes the cover. */
             order: string[];
+        };
+        CommentAuthorDto: {
+            /** @description The author's display name. Their email is never shown with a comment. */
+            name: string;
+        };
+        CommentDto: {
+            id: string;
+            author: components["schemas"]["CommentAuthorDto"];
+            body: string;
+            createdAt: string;
+            /** @description True only in an organiser's view: visitors never receive hidden comments. */
+            hidden: boolean;
+            /** @description The organiser's reason, in an organiser's view of a hidden comment; otherwise null. */
+            hideReason: string | null;
+        };
+        PostCommentDto: {
+            /** @description 1 to 2,000 characters; shown as plain text. */
+            body: string;
+        };
+        HideCommentDto: {
+            /** @description Why it is hidden: recorded in the audit trail and shown to the event's organisers. */
+            reason: string;
         };
     };
     responses: never;
@@ -3618,6 +3695,100 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    CommentsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id or fixture id (prj_01). */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentDto"][];
+                };
+            };
+        };
+    };
+    CommentsController_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project id or fixture id (prj_01). */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostCommentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentDto"];
+                };
+            };
+        };
+    };
+    CommentsController_hide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HideCommentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentDto"];
+                };
+            };
+        };
+    };
+    CommentsController_restore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentDto"];
+                };
             };
         };
     };

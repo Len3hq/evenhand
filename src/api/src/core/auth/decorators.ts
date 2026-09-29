@@ -10,6 +10,7 @@ export const EXPORT_RATE_LIMIT = 'evenhand:exportRateLimit';
 export const REVIEW_RATE_LIMIT = 'evenhand:reviewRateLimit';
 export const UPLOAD_RATE_LIMIT = 'evenhand:uploadRateLimit';
 export const IMAGE_RATE_LIMIT = 'evenhand:imageRateLimit';
+export const COMMENT_RATE_LIMIT = 'evenhand:commentRateLimit';
 
 /** Anyone may call this route, logged in or not. The actor is still resolved if present. */
 export const Public = (): MethodDecorator & ClassDecorator => SetMetadata(IS_PUBLIC, true);
@@ -38,6 +39,9 @@ export const UploadRateLimit = (): MethodDecorator => SetMetadata(UPLOAD_RATE_LI
  * one: image downloads, many per gallery page.
  */
 export const ImageRateLimit = (): MethodDecorator => SetMetadata(IMAGE_RATE_LIMIT, true);
+
+/** Count this route against the "comment" limit (RATE_LIMIT_COMMENT_PER_MIN): posting comments. */
+export const CommentRateLimit = (): MethodDecorator => SetMetadata(COMMENT_RATE_LIMIT, true);
 
 /** The authenticated caller. Only use on routes that are not @Public(). */
 export const CurrentActor = createParamDecorator((_: unknown, ctx: ExecutionContext): Actor => {

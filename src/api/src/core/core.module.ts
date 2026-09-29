@@ -5,6 +5,7 @@ import { AuditService } from './audit.service.js';
 import { ActorService } from './auth/actor.service.js';
 import {
   AUTH_RATE_LIMIT,
+  COMMENT_RATE_LIMIT,
   EXPORT_RATE_LIMIT,
   IMAGE_RATE_LIMIT,
   REVIEW_RATE_LIMIT,
@@ -72,6 +73,13 @@ const marked = (key: string, ctx: ExecutionContext): boolean =>
           ttl: MINUTE_MS,
           limit: config.rateLimitUploadPerMin,
           skipIf: (ctx) => !marked(UPLOAD_RATE_LIMIT, ctx),
+          generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
+        },
+        {
+          name: 'comment',
+          ttl: MINUTE_MS,
+          limit: config.rateLimitCommentPerMin,
+          skipIf: (ctx) => !marked(COMMENT_RATE_LIMIT, ctx),
           generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
         },
         {

@@ -25,6 +25,8 @@ export class AppConfig {
      * page loads many thumbnails, and a venue shares one address behind its NAT.
      */
     readonly rateLimitImagePerMin: number,
+    /** Comments posted per minute per address. */
+    readonly rateLimitCommentPerMin: number,
     /** Failed token or session checks per minute per address before it is refused for the minute. */
     readonly authFailuresPerMin: number,
     readonly uploadsDir: string,
@@ -69,6 +71,7 @@ export class AppConfig {
       int('RATE_LIMIT_REVIEW_PER_MIN', 120),
       int('RATE_LIMIT_UPLOAD_PER_MIN', 30),
       int('RATE_LIMIT_IMAGE_PER_MIN', 3000),
+      int('RATE_LIMIT_COMMENT_PER_MIN', 10),
       int('AUTH_FAILURES_PER_MIN', 20),
       env.UPLOADS_DIR ?? './uploads',
       int('SESSION_TTL_HOURS', 24 * 7),

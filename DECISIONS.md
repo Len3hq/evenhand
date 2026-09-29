@@ -26,6 +26,7 @@ Every design decision worth defending has its own record in [`docs/decisions/`](
 - [Organiser pages](docs/decisions/20260927-1535-a-organiser-pages.md)
 - [Organiser-defined questions](docs/decisions/20260928-1300-a-custom-questions.md): private by default, and answers teams have written are never lost.
 - [Image uploads](docs/decisions/20260928-1500-a-image-uploads.md): every upload re-encoded by the portal, and exactly as visible as its project.
+- [Comments on gallery projects](docs/decisions/20260929-0937-a-comments.md): moderated by the event's organisers, reversibly, with every step audited.
 
 ## Judging
 

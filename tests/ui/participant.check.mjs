@@ -29,6 +29,7 @@ const api = (page, token, path, data, method = 'POST') =>
     [path, data, method, token],
   );
 const stamp = Date.now();
+let projectUrl = '';
 
 /** A small solid-colour PNG, built here so the check needs no image file. */
 function png(width, height) {
@@ -191,6 +192,25 @@ await step('the project is in the public gallery', async () => {
   if (await visitor.getByText('We are night owls.').count()) {
     throw new Error('a private answer is shown in the public gallery');
   }
+  projectUrl = visitor.url();
+});
+
+await step('Ann comments on the project, and a visitor reads it', async () => {
+  const text = `Proud of this one ${stamp}`;
+  // The next step reuses the address of Ann's page (her submission): come back to it after.
+  const back = ann.url();
+  await ann.goto(projectUrl);
+  await ann.fill('#comment-body', text);
+  await ann.click('button:has-text("Post comment")');
+  await ann.locator('li', { hasText: text }).getByText('Ann Browser').waitFor();
+  const visitor = await newPage();
+  await visitor.goto(projectUrl);
+  await visitor.getByText(text).waitFor();
+  // Logged out: an invitation to log in, not a form.
+  if (await visitor.locator('#comment-body').count())
+    throw new Error('a visitor was offered the form');
+  await visitor.getByRole('link', { name: 'Log in' }).last().waitFor();
+  await ann.goto(back);
 });
 
 await step('Ben improves it after submitting; it stays submitted', async () => {
