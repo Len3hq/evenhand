@@ -81,67 +81,71 @@ export function ProgressBoard({ eventId, initial }: { eventId: string; initial: 
 
       <Card>
         <h2 className="mb-3 text-lg font-semibold">Judges</h2>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-muted">
-              <th className="font-medium">Judge</th>
-              <th className="font-medium">Tracks</th>
-              <th className="font-medium">Submitted</th>
-              <th className="font-medium">Drafts</th>
-              <th className="font-medium">Not started</th>
-              <th className="font-medium">Last active</th>
-            </tr>
-          </thead>
-          <tbody>
-            {judges.map((j) => (
-              <tr key={j.judgeId} className="border-t border-border">
-                <td className="py-1">
-                  {j.name}{' '}
-                  {j.flat ? (
-                    <span title="This judge gave every project exactly the same marks, so their marks do not tell projects apart.">
-                      <Badge tone="warning">same marks for every project</Badge>
-                    </span>
-                  ) : null}
-                </td>
-                <td className="text-muted">{j.tracks.join(', ') || '—'}</td>
-                <td className="tabular-nums">
-                  {j.finished} / {j.assigned}
-                </td>
-                <td className="tabular-nums">{j.drafts}</td>
-                <td className="tabular-nums">{j.notStarted}</td>
-                <td className="text-muted">
-                  {j.lastActivity ? formatUtc(j.lastActivity) : 'not yet'}
-                </td>
+        <div className="relative overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-muted">
+                <th className="font-medium">Judge</th>
+                <th className="font-medium">Tracks</th>
+                <th className="font-medium">Submitted</th>
+                <th className="font-medium">Drafts</th>
+                <th className="font-medium">Not started</th>
+                <th className="font-medium">Last active</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {judges.map((j) => (
+                <tr key={j.judgeId} className="border-t border-border">
+                  <td className="py-1">
+                    {j.name}{' '}
+                    {j.flat ? (
+                      <span title="This judge gave every project exactly the same marks, so their marks do not tell projects apart.">
+                        <Badge tone="warning">same marks for every project</Badge>
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="text-muted">{j.tracks.join(', ') || '—'}</td>
+                  <td className="tabular-nums">
+                    {j.finished} / {j.assigned}
+                  </td>
+                  <td className="tabular-nums">{j.drafts}</td>
+                  <td className="tabular-nums">{j.notStarted}</td>
+                  <td className="text-muted">
+                    {j.lastActivity ? formatUtc(j.lastActivity) : 'not yet'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
 
       <Card>
         <h2 className="mb-3 text-lg font-semibold">Projects</h2>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-muted">
-              <th className="font-medium">Project</th>
-              <th className="font-medium">Track</th>
-              <th className="font-medium">Reviews submitted</th>
-              <th className="font-medium">Drafts</th>
-            </tr>
-          </thead>
-          <tbody>
-            {projects.map((p) => (
-              <tr key={p.projectId} className="border-t border-border">
-                <td className="py-1">{p.title}</td>
-                <td className="text-muted">{p.track ?? '—'}</td>
-                <td className="tabular-nums">
-                  {p.finished} / {p.assigned}
-                </td>
-                <td className="tabular-nums">{p.drafts}</td>
+        <div className="relative overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-muted">
+                <th className="font-medium">Project</th>
+                <th className="font-medium">Track</th>
+                <th className="font-medium">Reviews submitted</th>
+                <th className="font-medium">Drafts</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {projects.map((p) => (
+                <tr key={p.projectId} className="border-t border-border">
+                  <td className="py-1">{p.title}</td>
+                  <td className="text-muted">{p.track ?? '—'}</td>
+                  <td className="tabular-nums">
+                    {p.finished} / {p.assigned}
+                  </td>
+                  <td className="tabular-nums">{p.drafts}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
     </div>
   );

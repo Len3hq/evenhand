@@ -46,7 +46,9 @@ export function ResultsTable({ rows, showReasons }: { rows: Row[]; showReasons: 
           cannot tell the projects apart.
         </p>
       ) : null}
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      {/* relative: keeps absolutely placed children (screen-reader labels) inside the scroller,
+          so a narrow screen scrolls the table, not the page. */}
+      <div className="relative overflow-x-auto rounded-lg border border-border bg-surface">
         <table className="w-full text-sm">
           <thead className="bg-bg">
             <tr className="text-left text-muted">

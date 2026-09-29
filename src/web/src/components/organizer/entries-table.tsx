@@ -54,7 +54,7 @@ export function EntriesTable({ entries }: { entries: Entry[] }) {
   return (
     <div className="space-y-3">
       {error ? <ErrorState title="Not done" message={error} /> : null}
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-muted">
