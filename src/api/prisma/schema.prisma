@@ -481,6 +481,9 @@ model Review {
   originalSubmissionId String?      @map("original_submission_id") @db.Uuid
   /// Null for reviews imported from fixtures.json, which carry no timestamps.
   submittedAt          DateTime?    @map("submitted_at") @db.Timestamptz(3)
+  /// SHA-256 of the submission's content when this review was submitted (content-hash.ts), so
+  /// a later edit by the team is visible to organisers. Null for imported reviews.
+  contentHash          String?      @map("content_hash")
   createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -518,6 +521,10 @@ model RankingRun {
   createdById String?   @map("created_by_id") @db.Uuid
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   publishedAt DateTime? @map("published_at") @db.Timestamptz(3)
+  /// The audit chain's head hash right after this run was published (its own publish entry
+  /// included). Shown with the public results: if history is ever rewritten from an earlier
+  /// point, this hash disappears from the audit log and the results page says so.
+  auditHead   String?   @map("audit_head")
 
   event Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
   rows  RankingRow[]

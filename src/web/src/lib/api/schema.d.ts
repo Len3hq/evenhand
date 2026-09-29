@@ -2157,6 +2157,11 @@ export interface components {
             /** @description Final reviews of the older entry that this run could not use. */
             heldOutReviews: number;
         };
+        ChangedAfterReviewDto: {
+            project: string;
+            /** @description Final reviews that scored an earlier version. */
+            reviews: number;
+        };
         RankingParamsDto: {
             method: string;
             weights: {
@@ -2178,6 +2183,11 @@ export interface components {
              *     Absent on runs made before this was recorded.
              */
             pendingDuplicates?: components["schemas"]["PendingDuplicateDto"][];
+            /**
+             * @description Projects whose team changed them after some of their final reviews were submitted: those
+             *     judges scored an earlier version. Shown, not blocking. Absent on older runs.
+             */
+            changedAfterReview?: components["schemas"]["ChangedAfterReviewDto"][];
         };
         RankingDto: {
             rows: components["schemas"]["RankingRowDto"][];
@@ -2212,6 +2222,16 @@ export interface components {
             /** @description Anyone can recompute these from the exported data to check the published result. */
             inputsHash: string;
             outputHash: string;
+            /**
+             * @description The audit chain's head when these results were published: anyone can note it down.
+             *     Null for results published before anchoring existed.
+             */
+            auditHead: string | null;
+            /**
+             * @description Checked now: is that hash still in the audit log? False means history was rewritten after
+             *     publication. Null when there is no anchor.
+             */
+            auditHeadInLog: boolean | null;
             tieGroups: number;
             rows: components["schemas"]["RankingRowDto"][];
         };
@@ -2230,6 +2250,11 @@ export interface components {
             disqualifyReason: string | null;
             /** @description Final reviews that count (reviews set aside by a duplicate merge are not counted). */
             finalReviews: number;
+            /**
+             * @description Of those, how many scored an earlier version: the team changed the entry after the judge
+             *     submitted (allowed until the deadline). 0 for reviews imported from fixtures.json.
+             */
+            changedAfterReview: number;
         };
         DuplicateMergeDto: {
             /** @description Judges who reviewed only the older copy: their reviews move to the kept entry. */

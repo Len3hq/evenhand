@@ -46,6 +46,7 @@ export function RankingPanel({
   const p = latest?.params;
   // Recorded by the run; decided flags need a fresh run to clear it (the API checks again on publish).
   const pending = p?.pendingDuplicates ?? [];
+  const changed = p?.changedAfterReview ?? [];
   const gain = p && p.meanOnlyLooMse > 0 ? (1 - p.looMse / p.meanOnlyLooMse) * 100 : null;
   const groups = latest
     ? new Set(latest.rows.flatMap((r) => (r.tieGroup ? [r.tieGroup] : []))).size
@@ -100,6 +101,26 @@ export function RankingPanel({
               <Badge tone="warning">Out of date: reviews or weights changed. Run it again.</Badge>
             )}
           </div>
+          {changed.length > 0 ? (
+            <div role="note" className="rounded-lg border border-border p-3 text-sm">
+              <p className="font-medium">
+                {changed.length} project{changed.length === 1 ? ' was' : 's were'} changed by their
+                team after some judges had scored {changed.length === 1 ? 'it' : 'them'}:
+              </p>
+              <ul className="mt-1 list-disc pl-5 text-muted">
+                {changed.map((c) => (
+                  <li key={c.project}>
+                    {c.project}: {c.reviews} review{c.reviews === 1 ? '' : 's'} of an earlier
+                    version
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-muted">
+                Teams may edit until the deadline, and a final review stays final. Weigh this when
+                reading the results; if a change was an abuse, disqualify the entry with a reason.
+              </p>
+            </div>
+          ) : null}
           {pending.length > 0 ? (
             <div role="alert" className="rounded-lg border border-warning p-3 text-sm">
               <p className="font-medium text-warning">

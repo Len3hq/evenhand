@@ -21,6 +21,11 @@ export class EntryDto {
   disqualifyReason: string | null;
   /** Final reviews that count (reviews set aside by a duplicate merge are not counted). */
   finalReviews: number;
+  /**
+   * Of those, how many scored an earlier version: the team changed the entry after the judge
+   * submitted (allowed until the deadline). 0 for reviews imported from fixtures.json.
+   */
+  changedAfterReview: number;
 }
 
 /** Whose reviews a duplicate decision moves across and whose it sets aside, by judge name. */

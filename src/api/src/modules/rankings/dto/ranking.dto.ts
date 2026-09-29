@@ -50,6 +50,17 @@ export class RankingParamsDto {
    * Absent on runs made before this was recorded.
    */
   pendingDuplicates?: PendingDuplicateDto[];
+  /**
+   * Projects whose team changed them after some of their final reviews were submitted: those
+   * judges scored an earlier version. Shown, not blocking. Absent on older runs.
+   */
+  changedAfterReview?: ChangedAfterReviewDto[];
+}
+
+export class ChangedAfterReviewDto {
+  project: string;
+  /** Final reviews that scored an earlier version. */
+  reviews: number;
 }
 
 export class RankingSummaryDto {
@@ -77,6 +88,16 @@ export class PublicResultsDto {
   /** Anyone can recompute these from the exported data to check the published result. */
   inputsHash: string;
   outputHash: string;
+  /**
+   * The audit chain's head when these results were published: anyone can note it down.
+   * Null for results published before anchoring existed.
+   */
+  auditHead: string | null;
+  /**
+   * Checked now: is that hash still in the audit log? False means history was rewritten after
+   * publication. Null when there is no anchor.
+   */
+  auditHeadInLog: boolean | null;
   tieGroups: number;
   rows: RankingRowDto[];
 }

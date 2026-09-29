@@ -62,6 +62,29 @@ export default async function ResultsPage({ params }: PageProps<'/events/[ref]/r
           <br />
           result {results.outputHash}
         </p>
+        {results.auditHead ? (
+          <>
+            <p className="mt-3 text-muted">
+              Every action in the event is recorded in a hash-chained audit log. When these results
+              were published, the chain ended at the hash below. If anyone later rewrote the
+              event&apos;s history, even directly in the database, this hash would no longer be in
+              the log.
+            </p>
+            <p className="mt-2 font-mono text-xs break-all text-muted">
+              audit anchor {results.auditHead}
+            </p>
+            {results.auditHeadInLog ? (
+              <p className="mt-1 text-success" role="status">
+                Checked just now: the anchor is still in the audit log.
+              </p>
+            ) : (
+              <p className="mt-1 font-medium text-danger" role="alert">
+                Checked just now: the anchor is missing from the audit log. History was changed
+                after these results were published.
+              </p>
+            )}
+          </>
+        ) : null}
       </details>
     </section>
   );

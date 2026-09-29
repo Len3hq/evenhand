@@ -9,6 +9,7 @@ import { isUuid } from '../../core/refs.js';
 import type { Criterion, Event, Submission } from '../../generated/prisma/client.js';
 import type { JudgeQueueDto, ReviewDto, ReviewState, SaveReviewDto } from './dto/review.dto.js';
 import { IMAGE_ORDER, toImageDto } from '../images/image-dto.js';
+import { CONTENT_INCLUDE, contentHash } from '../submissions/content-hash.js';
 import { coveredBy, IN_JUDGING } from './in-judging.js';
 
 /**
@@ -145,9 +146,14 @@ export class ReviewsService {
     }
     const review = a.review;
     await this.prisma.$transaction(async (tx) => {
+      // Remember which version was scored, so a later edit by the team shows to organisers.
+      const scored = await tx.submission.findUniqueOrThrow({
+        where: { id: a.submissionId },
+        include: CONTENT_INCLUDE,
+      });
       await tx.review.update({
         where: { id: review.id },
-        data: { status: 'FINAL', submittedAt: this.clock.now() },
+        data: { status: 'FINAL', submittedAt: this.clock.now(), contentHash: contentHash(scored) },
       });
       await this.audit.record(tx, {
         actorId: actor.userId,

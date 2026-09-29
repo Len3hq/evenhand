@@ -231,3 +231,43 @@ describe('undecided duplicates', () => {
     ]);
   });
 });
+
+describe('the audit anchor in published results', () => {
+  it('records the chain head at publish, and shows publicly when history is rewritten', async () => {
+    const s = await judgedEvent(t, { assigned: true });
+    await judgeEverything(s);
+    const ranking = (await run(s.ev.slug)).body;
+    expect((await publish(ranking.id)).status).toBe(200);
+
+    const results = (await t.http().get(`/api/events/${s.ev.slug}/results`)).body;
+    expect(results.auditHead).toMatch(/^[0-9a-f]{64}$/);
+    expect(results.auditHeadInLog).toBe(true);
+    // The anchor is the publish entry itself: the newest entry at that moment.
+    const anchored = await t.prisma.auditLog.findFirst({ where: { hash: results.auditHead } });
+    expect(anchored?.action).toBe('ranking.published');
+
+    // Someone with database access rewrites the anchored entry (and so its hash).
+    const off = 'ALTER TABLE audit_log DISABLE TRIGGER USER';
+    const on = 'ALTER TABLE audit_log ENABLE TRIGGER USER';
+    await t.prisma.$transaction([
+      t.prisma.$executeRawUnsafe(off),
+      t.prisma.$executeRawUnsafe(
+        `UPDATE audit_log SET hash = repeat('f', 64) WHERE id = ${anchored!.id}`,
+      ),
+      t.prisma.$executeRawUnsafe(on),
+    ]);
+    try {
+      const after = (await t.http().get(`/api/events/${s.ev.slug}/results`)).body;
+      expect(after.auditHeadInLog).toBe(false);
+    } finally {
+      await t.prisma.$transaction([
+        t.prisma.$executeRawUnsafe(off),
+        t.prisma.$executeRawUnsafe(
+          `UPDATE audit_log SET hash = '${results.auditHead}' WHERE id = ${anchored!.id}`,
+        ),
+        t.prisma.$executeRawUnsafe(on),
+      ]);
+    }
+    expect((await t.http().get(`/api/events/${s.ev.slug}/results`)).body.auditHeadInLog).toBe(true);
+  });
+});

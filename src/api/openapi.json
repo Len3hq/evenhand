@@ -5886,6 +5886,22 @@
           "heldOutReviews"
         ]
       },
+      "ChangedAfterReviewDto": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "string"
+          },
+          "reviews": {
+            "type": "number",
+            "description": "Final reviews that scored an earlier version."
+          }
+        },
+        "required": [
+          "project",
+          "reviews"
+        ]
+      },
       "RankingParamsDto": {
         "type": "object",
         "properties": {
@@ -5930,6 +5946,13 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PendingDuplicateDto"
+            }
+          },
+          "changedAfterReview": {
+            "description": "Projects whose team changed them after some of their final reviews were submitted: those\njudges scored an earlier version. Shown, not blocking. Absent on older runs.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChangedAfterReviewDto"
             }
           }
         },
@@ -6058,6 +6081,16 @@
           "outputHash": {
             "type": "string"
           },
+          "auditHead": {
+            "type": "string",
+            "nullable": true,
+            "description": "The audit chain's head when these results were published: anyone can note it down.\nNull for results published before anchoring existed."
+          },
+          "auditHeadInLog": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Checked now: is that hash still in the audit log? False means history was rewritten after\npublication. Null when there is no anchor."
+          },
           "tieGroups": {
             "type": "number"
           },
@@ -6075,6 +6108,8 @@
           "method",
           "inputsHash",
           "outputHash",
+          "auditHead",
+          "auditHeadInLog",
           "tieGroups",
           "rows"
         ]
@@ -6125,6 +6160,10 @@
           "finalReviews": {
             "type": "number",
             "description": "Final reviews that count (reviews set aside by a duplicate merge are not counted)."
+          },
+          "changedAfterReview": {
+            "type": "number",
+            "description": "Of those, how many scored an earlier version: the team changed the entry after the judge\nsubmitted (allowed until the deadline). 0 for reviews imported from fixtures.json."
           }
         },
         "required": [
@@ -6137,7 +6176,8 @@
           "submittedAt",
           "state",
           "disqualifyReason",
-          "finalReviews"
+          "finalReviews",
+          "changedAfterReview"
         ]
       },
       "DuplicateMergeDto": {

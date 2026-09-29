@@ -1,11 +1,15 @@
 import type { Prisma } from '../../generated/prisma/client.js';
+import { CONTENT_INCLUDE, reviewsOfOlderVersion } from '../submissions/content-hash.js';
 import type { EntryDto, EntryState } from './dto/integrity.dto.js';
 
 /** What an entry needs to be shown to organisers. */
 export const ENTRY_INCLUDE = {
+  ...CONTENT_INCLUDE,
   team: { select: { name: true } },
   track: { select: { name: true } },
-  assignments: { select: { review: { select: { status: true, superseded: true } } } },
+  assignments: {
+    select: { review: { select: { status: true, superseded: true, contentHash: true } } },
+  },
 } satisfies Prisma.SubmissionInclude;
 
 export type EntryRow = Prisma.SubmissionGetPayload<{ include: typeof ENTRY_INCLUDE }>;
@@ -34,6 +38,7 @@ export function toEntry(s: EntryRow): EntryDto {
     disqualifyReason: s.disqualifyReason,
     finalReviews: s.assignments.filter((a) => a.review?.status === 'FINAL' && !a.review.superseded)
       .length,
+    changedAfterReview: reviewsOfOlderVersion(s),
   };
 }
 

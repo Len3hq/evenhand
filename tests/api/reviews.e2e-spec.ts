@@ -224,3 +224,36 @@ describe('track isolation after an organiser changes a judge’s tracks', () => 
     expect(back.body.values).toEqual({ impact: 4 });
   });
 });
+
+describe('reviews of an earlier version', () => {
+  it('shows organisers when a team changes its entry after a judge scored it', async () => {
+    const s = await setup();
+    await save(s.first, { values: { impact: 4, polish: 3 } }, s.judge.headers);
+    expect((await submit(s.first, s.judge.headers)).status).toBe(200);
+    const projectId = (await get(s.first, s.judge.headers)).body.project.id as string;
+    const maker = s.gamesProjects.find((p) => p.id === projectId)!.maker;
+
+    const entries = async () =>
+      (await t.http().get(`/api/events/${s.ev.slug}/submissions`).set(organizer)).body as {
+        id: string;
+        changedAfterReview: number;
+      }[];
+    expect((await entries()).find((e) => e.id === projectId)?.changedAfterReview).toBe(0);
+
+    // Allowed until the deadline, but the judge scored the old text.
+    const edit = await t
+      .http()
+      .patch(`/api/submissions/${projectId}`)
+      .set(maker.headers)
+      .send({ summary: 'Rewritten after judging started' });
+    expect(edit.status).toBe(200);
+    const after = await entries();
+    expect(after.find((e) => e.id === projectId)?.changedAfterReview).toBe(1);
+    expect(after.filter((e) => e.id !== projectId).every((e) => e.changedAfterReview === 0)).toBe(
+      true,
+    );
+
+    const run = await t.http().post(`/api/events/${s.ev.slug}/rankings`).set(organizer);
+    expect(run.body.params.changedAfterReview).toEqual([expect.objectContaining({ reviews: 1 })]);
+  });
+});

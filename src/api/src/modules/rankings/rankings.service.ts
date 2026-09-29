@@ -11,7 +11,9 @@ import { eventByRef, isUuid } from '../../core/refs.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { manageableEvent } from '../events/manageable-event.js';
 import { IN_JUDGING } from '../judging/in-judging.js';
+import { CONTENT_INCLUDE, reviewsOfOlderVersion } from '../submissions/content-hash.js';
 import type {
+  ChangedAfterReviewDto,
   PendingDuplicateDto,
   PublicResultsDto,
   RankingDto,
@@ -119,6 +121,7 @@ export class RankingsService {
     ];
     const reviewed = new Set(fit.projects.map((p) => p.projectId));
     const pendingDuplicates = await this.pendingDuplicates(event.id);
+    const changedAfterReview = await this.changedAfterReview(event.id);
     const params: RankingParamsDto = {
       method: METHOD,
       weights: Object.fromEntries(inputs.criteria.map((c) => [c.key, c.weight])),
@@ -133,6 +136,7 @@ export class RankingsService {
         .filter((id) => !reviewed.has(id))
         .sort(),
       pendingDuplicates,
+      changedAfterReview,
     };
     const inputsHash = hash(inputs);
     const outputHash = hash(
@@ -233,6 +237,11 @@ export class RankingsService {
         targetId: run.id,
         after: { inputsHash: run.inputsHash, outputHash: run.outputHash },
       });
+      // Anchor the audit chain in the published results: the head right after this publish
+      // entry. It goes public with the results, so rewriting history from any earlier point
+      // (which changes every later hash) makes it vanish from the log, visibly.
+      const head = await tx.auditChainHead.findUniqueOrThrow({ where: { id: 1 } });
+      await tx.rankingRun.update({ where: { id: run.id }, data: { auditHead: head.hash } });
     });
     return this.get(actor, run.id);
   }
@@ -254,10 +263,15 @@ export class RankingsService {
       );
     }
     const rows = await this.rowsOf(run.id);
+    const auditHeadInLog = run.auditHead
+      ? (await this.prisma.auditLog.count({ where: { hash: run.auditHead } })) > 0
+      : null;
     return {
       eventId: event.id,
       eventName: event.name,
       publishedAt: run.publishedAt!.toISOString(),
+      auditHead: run.auditHead,
+      auditHeadInLog,
       method: run.method,
       inputsHash: run.inputsHash,
       outputHash: run.outputHash,
@@ -315,6 +329,26 @@ export class RankingsService {
       run.publishedAt !== null,
     ]);
     return { filename: `${event.slug}-results.csv`, csv: toCsv(header, cells) };
+  }
+
+  /** Projects in judging with final reviews of an earlier version (see content-hash.ts). */
+  private async changedAfterReview(eventId: string): Promise<ChangedAfterReviewDto[]> {
+    const rows = await this.prisma.submission.findMany({
+      where: { eventId, ...IN_JUDGING },
+      include: {
+        ...CONTENT_INCLUDE,
+        assignments: {
+          select: { review: { select: { status: true, superseded: true, contentHash: true } } },
+        },
+      },
+      orderBy: [{ title: 'asc' }, { id: 'asc' }],
+    });
+    return rows
+      .map((s) => ({
+        project: s.externalId ? `${s.title} (${s.externalId})` : s.title,
+        reviews: reviewsOfOlderVersion(s),
+      }))
+      .filter((c) => c.reviews > 0);
   }
 
   /** Undecided duplicate flags, and how many final reviews each held copy keeps out of a run. */

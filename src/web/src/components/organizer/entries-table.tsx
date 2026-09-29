@@ -81,7 +81,17 @@ export function EntriesTable({ entries }: { entries: Entry[] }) {
                   <span className="text-muted">· {e.teamName}</span>
                 </td>
                 <td className="py-2 text-muted">{e.track ?? '—'}</td>
-                <td className="py-2 tabular-nums">{e.finalReviews}</td>
+                <td className="py-2 tabular-nums">
+                  {e.finalReviews}
+                  {e.changedAfterReview > 0 ? (
+                    <span
+                      className="ml-2"
+                      title="The team changed this entry after these judges submitted; they scored an earlier version."
+                    >
+                      <Badge tone="warning">{e.changedAfterReview} of an earlier version</Badge>
+                    </span>
+                  ) : null}
+                </td>
                 <td className="py-2">
                   <Badge tone={e.state === 'IN_JUDGING' ? 'neutral' : 'warning'}>
                     {STATE[e.state]}
