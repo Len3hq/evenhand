@@ -120,6 +120,29 @@ describe('rate limits', () => {
     expect(statuses).toEqual([401, 401, 401, 429, 429]);
   });
 
+  it('keeps a separate login allowance per email, so people behind one address do not collide', async () => {
+    for (let i = 0; i < 4; i++) {
+      const res = await t
+        .http()
+        .post('/api/auth/login')
+        .send({ email: `person${i}@example.org`, password: 'y' });
+      expect(res.status).toBe(401);
+    }
+  });
+
+  it('keeps limiting one account when the guesser changes its reported address', async () => {
+    const statuses: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      const res = await t
+        .http()
+        .post('/api/auth/login')
+        .set('X-Forwarded-For', `203.0.113.${i}`)
+        .send({ email: 'Target@Example.org', password: 'y' });
+      statuses.push(res.status);
+    }
+    expect(statuses).toEqual([401, 401, 401, 429, 429]);
+  });
+
   it('does not count ordinary routes against the login limit', async () => {
     for (let i = 0; i < 5; i++) {
       expect((await t.http().get('/api/projects')).status).toBe(200);

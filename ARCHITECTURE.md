@@ -36,10 +36,11 @@ Each decision below links to its record where one exists; all of them are in [`d
 
 Every API request passes the same layers, in this order (registered in `core/core.module.ts`):
 
-1. **ThrottlerGuard**: per-IP rate limits, each a named counter (`core/core.module.ts`): `default` (300/min) everywhere except image downloads; `auth` (10/min) for login and register; `export` (30/min, one counter across every CSV and the event JSON); `review` (120/min, judge saves and submits); `upload` (30/min, image uploads, each re-encoded); `image` (3000/min, image downloads, many per gallery page). Over a limit → 429, audited once a minute per address for admins.
+1. **ThrottlerGuard**: rate limits, each a named counter (`core/core.module.ts`), counted per credential (bearer token, session cookie or personal voting link, hashed) and per address only for anonymous requests; login and register count per email ([ADR](docs/decisions/20260929-1500-a-rate-limit-keys.md)): `default` (300/min) everywhere except image downloads; `auth` (10/min) for login and register; `export` (30/min, one counter across every CSV and the event JSON); `review` (120/min, judge saves and submits); `upload` (30/min, image uploads, each re-encoded); `image` (3000/min, image downloads, many per gallery page); `comment` (10/min); `vote` (60/min). Over a limit → 429, audited once a minute per address for admins.
 2. **SessionGuard**: resolves the caller from `Authorization: Bearer` (hashed `api_tokens`) or the `session` cookie (hashed `sessions`) into an `Actor` with all their event roles.
    - Cookie-authenticated **writes** must carry an allowed `Origin` (or `Referer`): the CSRF defence. Bearer tokens are exempt; they are not ambient credentials.
    - Demo tokens are refused unless `DEMO_MODE=true`.
+   - After `AUTH_FAILURES_PER_MIN` failed credentials from one address in a minute, further failing ones get 429 instead of 401. A valid credential always gets through, so nobody can lock others out.
    - Non-public route with no valid caller → **401 JSON**. There are no redirects anywhere under `/api`.
 3. **RoleGuard**: `@RequireRole('JUDGE')` etc.; the caller must hold the role in _some_ event. Wrong role → 403.
 4. **Route guards**: `SubmissionsOpenGuard` resolves `:eventRef` and refuses with **403 `submissions_closed`** once `now ≥ submissions_close`; `EditableSubmissionGuard` checks the team, the deadline and the duplicate state for image writes. Guards run before pipes and interceptors, so a closed event refuses before the body is validated, and a stranger's upload is refused before a byte of it is read.
@@ -53,6 +54,15 @@ Every API request passes the same layers, in this order (registered in `core/cor
 
 - The caller is not that judge and is not an organiser anywhere → **403 immediately**. The database is never asked whether `jdg_24` exists, so the answer for a real judge and a made-up one is byte-identical (tested).
 - The caller is an organiser → the judge is looked up; allowed only if the caller organises _that judge's_ event (an organiser of another event gets 403, tested).
+
+## Audit integrity
+
+Every write and its audit entry share one transaction. The log is append-only (triggers refuse `UPDATE`, `DELETE` and `TRUNCATE`), and the database chains it: a `BEFORE INSERT` trigger locks the one-row `audit_chain_head`, then stores each entry's SHA-256 over its content and the previous entry's hash. The API cannot skip or forge a link, and editing an old entry, even in SQL with the triggers disabled, breaks every later hash. `GET /api/audit/verify` and `cli verify-audit` recompute the chain and count altered and unlinked entries (organisers see the verdict and the counts; admins also see which entries) ([ADR](docs/decisions/20260928-1900-a-audit-hash-chain.md)).
+
+Two records tie the chain to judging ([ADR](docs/decisions/20260929-1200-a-audit-anchor-and-scored-version.md)):
+
+- **Publish anchor.** Publishing results stores the chain's head on the ranking run (`ranking_runs.audit_head`); the public results page shows it and checks it is still in the log. Someone who rewrote history and recomputed the whole chain would still remove the published anchor.
+- **Scored version.** Submitting a review stores a hash of the entry's content (`reviews.content_hash`), so the entries table and each ranking run show projects edited after a judge scored them.
 
 ## API modules
 
@@ -72,12 +82,12 @@ Each module under `src/api/src/modules/` is a controller (thin), a service (the 
 | `comments`    | Comments on public projects, and their moderation (hide with a reason, restore)                                         |
 | `voting`      | Community voting: the event's vote and its settings, personal and shared links, ballots and votes, tally and publishing |
 | `integrity`   | Suspected duplicates (confirm, dismiss, reopen), disqualification, the entries list                                     |
-| `audit`       | The readable event and platform trails, audit CSV                                                                       |
+| `audit`       | The readable event and platform trails, audit CSV, the hash chain's check (`GET /api/audit/verify`)                     |
 | `exports`     | Teams, submissions and assignments CSVs                                                                                 |
 | `transfer`    | The event export in the fixtures.json shape                                                                             |
 | `health`      | `/api/healthz` (checks the database)                                                                                    |
 
-The command line (`src/api/src/cli/`) uses the same modules and rules: `seed`, `import`, `export-event`, `create-admin`, `reset-password`, `tokens`, `openapi`.
+The command line (`src/api/src/cli/`) uses the same modules and rules: `seed`, `import`, `export-event`, `create-admin`, `reset-password`, `tokens`, `openapi`, `verify-audit`.
 
 ## Start-up (api container)
 
@@ -111,12 +121,12 @@ Environment variables, validated at start-up (`core/config.ts`; a bad value stop
 | `DEMO_MODE`                                               | `false` (compose sets `true`) | Seed demo tokens and passwords, and accept demo tokens                                                                                                |
 | `DEMO_PASSWORD`                                           | `evenhand-demo`               | Password of every seeded account in demo mode                                                                                                         |
 | `ALLOWED_ORIGINS`                                         | `http://localhost:8080`       | Origins allowed to make cookie-authenticated writes                                                                                                   |
-| `RATE_LIMIT_DEFAULT_PER_MIN` / `RATE_LIMIT_LOGIN_PER_MIN` | `300` / `10`                  | Per-IP limits                                                                                                                                         |
-| `RATE_LIMIT_EXPORT_PER_MIN` / `RATE_LIMIT_REVIEW_PER_MIN` | `30` / `120`                  | Exports (all CSVs and the event JSON, one counter) and judge review writes, per IP                                                                    |
-| `RATE_LIMIT_COMMENT_PER_MIN`                              | `10`                          | Comments posted per IP                                                                                                                                |
-| `RATE_LIMIT_VOTE_PER_MIN`                                 | `60`                          | Votes, withdrawals and ballots taken from a shared voting link, per IP                                                                                |
+| `RATE_LIMIT_DEFAULT_PER_MIN` / `RATE_LIMIT_LOGIN_PER_MIN` | `300` / `10`                  | Per route and caller; logins and registrations per email                                                                                              |
+| `RATE_LIMIT_EXPORT_PER_MIN` / `RATE_LIMIT_REVIEW_PER_MIN` | `30` / `120`                  | Exports (all CSVs and the event JSON, one counter) and judge review writes, per caller                                                                |
+| `RATE_LIMIT_COMMENT_PER_MIN`                              | `10`                          | Comments posted per caller                                                                                                                            |
+| `RATE_LIMIT_VOTE_PER_MIN`                                 | `60`                          | Votes, withdrawals and ballots taken from a shared voting link (per address: those callers are anonymous)                                             |
 | `RATE_LIMIT_UPLOAD_PER_MIN` / `RATE_LIMIT_IMAGE_PER_MIN`  | `30` / `3000`                 | Image uploads (each is re-encoded), and image downloads, which have their own limit instead of the default one (a gallery page loads many thumbnails) |
-| `AUTH_FAILURES_PER_MIN`                                   | `20`                          | Failed token or session checks per IP before it is refused (429) for the rest of the minute                                                           |
+| `AUTH_FAILURES_PER_MIN`                                   | `20`                          | Failed token or session checks per address before further failing ones get 429 for the rest of the minute; valid credentials always pass              |
 | `SESSION_TTL_HOURS`                                       | `168`                         | Browser session lifetime                                                                                                                              |
 | `UPLOADS_DIR`                                             | `./uploads`                   | Re-encoded project images (volume `uploads` in Docker)                                                                                                |
 | `FIXTURES_PATH`                                           | `data/fixtures.json`          | Used by `cli seed` when `--fixtures` is not given                                                                                                     |
@@ -138,7 +148,8 @@ Environment variables, validated at start-up (`core/config.ts`; a bad value stop
 
 ## Known trade-offs
 
-- **Rate limiting trusts `X-Forwarded-For` from private-range proxies.** Next's proxy keeps a client-supplied `X-Forwarded-For`, so a client can rotate that header to dodge per-IP limits. For a public deployment, put a reverse proxy in front that overwrites it (see the [threat model](JUDGING.md#threat-model)).
+- **The API trusts `X-Forwarded-For` from private-range proxies.** Next's proxy keeps a client-supplied `X-Forwarded-For`, so a client can choose the address the API sees. Limits for signed-in callers and logins do not depend on it (they count per credential and per email); anonymous limits and the failed-credential brake do. For a public deployment, put a reverse proxy in front that overwrites it (see the [threat model](JUDGING.md#threat-model)).
+- **Anonymous callers share one address on the bundled stack.** Every browser reaches the API through the web container, so anonymous gallery views share `RATE_LIMIT_DEFAULT_PER_MIN` per route, and ballots taken from a shared voting link share `RATE_LIMIT_VOTE_PER_MIN`. For a large audience, raise them or add a reverse proxy that sets `X-Forwarded-For` ([ADR](docs/decisions/20260929-1500-a-rate-limit-keys.md)).
 - **Rate-limit counters are in memory**: correct for one API instance; several instances would need a shared store.
 - **Addresses in the admin trail are what the api sees.** Behind the bundled proxy alone that is the proxy's or Docker's address; a reverse proxy that sets `X-Forwarded-For` makes them the visitors' own.
 - **Image files and their rows are written in two steps.** Files are written first and removed if the database write fails; if the server stops in between, the files stay unused (never served, since serving starts from the row).

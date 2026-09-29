@@ -23,7 +23,7 @@ export const Public = (): MethodDecorator & ClassDecorator => SetMetadata(IS_PUB
 export const RequireRole = (...roles: EventRoleKind[]): MethodDecorator & ClassDecorator =>
   SetMetadata(REQUIRED_ROLES, roles);
 
-/** Apply the stricter per-IP "auth" rate limit (login, register) to this route. */
+/** Apply the stricter "auth" rate limit (login, register; counted per email) to this route. */
 export const AuthRateLimit = (): MethodDecorator => SetMetadata(AUTH_RATE_LIMIT, true);
 
 /** Count this route against the "export" limit (RATE_LIMIT_EXPORT_PER_MIN): CSV and JSON dumps. */

@@ -16,6 +16,7 @@ Every design decision worth defending has its own record in [`docs/decisions/`](
 - [Who can create an event](docs/decisions/20260927-0811-a-who-creates-events.md): admins, and people who already organise one.
 - [Appointing organisers](docs/decisions/20260927-1729-a-appointing-organisers.md): never the last one, never someone competing in or judging the event.
 - [Rate limits that match the threat model, and a nonce-based CSP](docs/decisions/20260927-2310-a-rate-limits-and-csp.md)
+- [Rate limits count per credential, not per address](docs/decisions/20260929-1500-a-rate-limit-keys.md): behind the bundled proxy everyone shares one address, so one person could lock an event out.
 - [API tokens from the shell, and the offline drill](docs/decisions/20260927-2329-a-api-tokens-and-offline-drill.md): tokens are issued and revoked where the first admin is created; the drill proves the portal runs with the network cut.
 
 ## Events, teams and submissions

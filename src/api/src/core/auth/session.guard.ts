@@ -45,11 +45,16 @@ export class SessionGuard implements CanActivate {
       context.getClass(),
     ]);
 
-    // An address that keeps presenting bad credentials is refused for the rest of the minute.
+    // An address that keeps presenting bad credentials gets 429 instead of 401 for the rest of
+    // the minute, which slows guessing. Only failing requests are refused: a valid credential
+    // always gets through. Behind the bundled proxy every visitor shares one address, so locking
+    // the address itself would let anyone lock the whole event out with a few bad tokens.
     // Only on routes that need a login: an expired cookie on the public gallery is not a guess.
-    if (!isPublic) await this.failures.assertAllowed(req);
     const result = await this.authenticate(req);
-    if (result && 'failure' in result && !isPublic) this.failures.recordFailure(req);
+    if (result && 'failure' in result && !isPublic) {
+      await this.failures.assertAllowed(req);
+      this.failures.recordFailure(req);
+    }
     if (result && 'actor' in result) {
       if (result.actor.via === 'session' && !SAFE_METHODS.has(req.method)) {
         this.assertAllowedOrigin(req);

@@ -6,6 +6,7 @@ import { Clock } from './clock.js';
 import { AppConfig } from './config.js';
 import { DomainError } from './errors.js';
 import { PrismaService } from './prisma.service.js';
+import { hashToken } from './tokens.js';
 
 const MINUTE_MS = 60_000;
 
@@ -55,9 +56,11 @@ export class AuditedThrottlerGuard extends ThrottlerGuard {
 }
 
 /**
- * Failed credential checks per address. After `authFailuresPerMin` failures in a minute the
- * address is refused (429) for the rest of that minute, valid credentials included: answering
- * a correct guess differently would tell the guesser it was correct.
+ * Failed credential checks per address. After `authFailuresPerMin` failures in a minute, further
+ * failing checks from the address get 429 for the rest of that minute. A valid credential is
+ * never refused: behind the bundled proxy every visitor shares one address, so refusing the
+ * address would let anyone lock the whole event out. Letting a correct guess through tells the
+ * guesser nothing useful, because tokens are 256-bit random values.
  */
 @Injectable()
 export class AuthFailureLimiter {
@@ -131,4 +134,52 @@ async function recordRefusal(
     // Never let auditing a refusal turn a 429 into a 500.
     log.error(`could not audit a rate-limit refusal: ${String(err)}`);
   }
+}
+
+/** The parts of an Express request the trackers read (the throttler passes the raw request). */
+interface TrackedRequest {
+  ip?: string;
+  path?: string;
+  headers?: { authorization?: string };
+  cookies?: Record<string, unknown>;
+  params?: Record<string, unknown>;
+  body?: { email?: unknown };
+}
+
+/**
+ * Whose bucket a request counts against. Behind the bundled proxy every visitor reaches the API
+ * from the same address (the web container's), so keying limits by address alone would make
+ * every limit one shared allowance for the whole event. Requests carrying a credential count
+ * against that credential instead (hashed, never stored); only anonymous requests fall back to
+ * the address. Personal voting links (/voting/passes/:token) are credentials too.
+ */
+export function rateLimitTracker(req: TrackedRequest): string {
+  const auth = req.headers?.authorization;
+  if (typeof auth === 'string' && auth.startsWith('Bearer ')) {
+    return `token:${hashToken(auth.slice('Bearer '.length).trim())}`;
+  }
+  const session = req.cookies?.session;
+  if (typeof session === 'string' && session) return `session:${hashToken(session)}`;
+  const pass = req.params?.token;
+  if (
+    typeof pass === 'string' &&
+    typeof req.path === 'string' &&
+    req.path.includes('/voting/passes/')
+  ) {
+    return `pass:${hashToken(pass)}`;
+  }
+  return `ip:${req.ip ?? 'unknown'}`;
+}
+
+/**
+ * Login and registration: per email. Guessing one account's password stays limited however the
+ * guesser varies its address (the API trusts X-Forwarded-For from the web container, and a
+ * client can put anything there), while different people signing in at the same moment, who
+ * share an address behind the bundled proxy, no longer use up each other's attempts. The cost:
+ * someone can use up one account's logins for a minute; sessions already open are unaffected.
+ * Without an email the request falls back to its address.
+ */
+export function authTracker(req: TrackedRequest): string {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  return email ? `email:${hashToken(email)}` : `ip:${req.ip ?? 'unknown'}`;
 }

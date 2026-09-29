@@ -10,8 +10,8 @@
 # host.docker.internal resolve on Linux too (Docker Desktop provides it already). The checks add
 # their own events and accounts; they never change existing ones.
 #
-# The stack allows 10 logins and registrations per minute per address (RATE_LIMIT_LOGIN_PER_MIN)
-# and the checks use 10, so wait a minute between two runs or they will see 429s.
+# Logins and registrations are limited per email (RATE_LIMIT_LOGIN_PER_MIN, 10 a minute); the
+# checks register fresh accounts each run, so two runs back to back stay well inside it.
 set -eu
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 PLAYWRIGHT=1.55.0

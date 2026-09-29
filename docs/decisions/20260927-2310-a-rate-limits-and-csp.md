@@ -1,6 +1,6 @@
 # Rate limits that match the threat model, and a nonce-based CSP
 
-- Status: accepted
+- Status: accepted; the keys and the failed-credential rule were changed by [Rate limits count per credential](20260929-1500-a-rate-limit-keys.md)
 - Date: 2026-09-27 · Owner: A
 
 ## Context

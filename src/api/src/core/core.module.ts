@@ -19,7 +19,12 @@ import { AppConfig } from './config.js';
 import { SubmissionsOpenGuard } from './deadline.js';
 import { AllExceptionsFilter } from './errors.js';
 import { PrismaService } from './prisma.service.js';
-import { AuditedThrottlerGuard, AuthFailureLimiter } from './rate-limit.js';
+import {
+  AuditedThrottlerGuard,
+  AuthFailureLimiter,
+  authTracker,
+  rateLimitTracker,
+} from './rate-limit.js';
 
 const MINUTE_MS = 60_000;
 
@@ -38,66 +43,72 @@ const marked = (key: string, ctx: ExecutionContext): boolean =>
 @Module({
   imports: [
     ThrottlerModule.forRootAsync({
-      useFactory: (config: AppConfig) => [
-        {
-          name: 'default',
-          ttl: MINUTE_MS,
-          limit: config.rateLimitDefaultPerMin,
-          // Image downloads have their own, larger limit (below).
-          skipIf: (ctx) => marked(IMAGE_RATE_LIMIT, ctx),
-        },
-        {
-          name: 'auth',
-          ttl: MINUTE_MS,
-          limit: config.rateLimitLoginPerMin,
-          // Only routes marked @AuthRateLimit() (login, register) count against this one.
-          skipIf: (ctx) => !marked(AUTH_RATE_LIMIT, ctx),
-        },
-        // Exports and judge writes have limits of their own (decision 55).
-        {
-          name: 'export',
-          ttl: MINUTE_MS,
-          limit: config.rateLimitExportPerMin,
-          skipIf: (ctx) => !marked(EXPORT_RATE_LIMIT, ctx),
-          // One counter per address across every export route, not one per route.
-          generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
-        },
-        {
-          name: 'review',
-          ttl: MINUTE_MS,
-          limit: config.rateLimitReviewPerMin,
-          skipIf: (ctx) => !marked(REVIEW_RATE_LIMIT, ctx),
-          generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
-        },
-        {
-          name: 'upload',
-          ttl: MINUTE_MS,
-          limit: config.rateLimitUploadPerMin,
-          skipIf: (ctx) => !marked(UPLOAD_RATE_LIMIT, ctx),
-          generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
-        },
-        {
-          name: 'comment',
-          ttl: MINUTE_MS,
-          limit: config.rateLimitCommentPerMin,
-          skipIf: (ctx) => !marked(COMMENT_RATE_LIMIT, ctx),
-          generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
-        },
-        {
-          name: 'vote',
-          ttl: MINUTE_MS,
-          limit: config.rateLimitVotePerMin,
-          skipIf: (ctx) => !marked(VOTE_RATE_LIMIT, ctx),
-          generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
-        },
-        {
-          name: 'image',
-          ttl: MINUTE_MS,
-          limit: config.rateLimitImagePerMin,
-          skipIf: (ctx) => !marked(IMAGE_RATE_LIMIT, ctx),
-          generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
-        },
-      ],
+      // Buckets are per credential, falling back to the address (rateLimitTracker); login and
+      // registration are per email (authTracker).
+      useFactory: (config: AppConfig) => ({
+        getTracker: rateLimitTracker,
+        throttlers: [
+          {
+            name: 'default',
+            ttl: MINUTE_MS,
+            limit: config.rateLimitDefaultPerMin,
+            // Image downloads have their own, larger limit (below).
+            skipIf: (ctx) => marked(IMAGE_RATE_LIMIT, ctx),
+          },
+          {
+            name: 'auth',
+            ttl: MINUTE_MS,
+            limit: config.rateLimitLoginPerMin,
+            // Only routes marked @AuthRateLimit() (login, register) count against this one.
+            skipIf: (ctx) => !marked(AUTH_RATE_LIMIT, ctx),
+            getTracker: authTracker,
+          },
+          // Exports and judge writes have limits of their own (decision 55).
+          {
+            name: 'export',
+            ttl: MINUTE_MS,
+            limit: config.rateLimitExportPerMin,
+            skipIf: (ctx) => !marked(EXPORT_RATE_LIMIT, ctx),
+            // One counter per caller across every export route, not one per route.
+            generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
+          },
+          {
+            name: 'review',
+            ttl: MINUTE_MS,
+            limit: config.rateLimitReviewPerMin,
+            skipIf: (ctx) => !marked(REVIEW_RATE_LIMIT, ctx),
+            generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
+          },
+          {
+            name: 'upload',
+            ttl: MINUTE_MS,
+            limit: config.rateLimitUploadPerMin,
+            skipIf: (ctx) => !marked(UPLOAD_RATE_LIMIT, ctx),
+            generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
+          },
+          {
+            name: 'comment',
+            ttl: MINUTE_MS,
+            limit: config.rateLimitCommentPerMin,
+            skipIf: (ctx) => !marked(COMMENT_RATE_LIMIT, ctx),
+            generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
+          },
+          {
+            name: 'vote',
+            ttl: MINUTE_MS,
+            limit: config.rateLimitVotePerMin,
+            skipIf: (ctx) => !marked(VOTE_RATE_LIMIT, ctx),
+            generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
+          },
+          {
+            name: 'image',
+            ttl: MINUTE_MS,
+            limit: config.rateLimitImagePerMin,
+            skipIf: (ctx) => !marked(IMAGE_RATE_LIMIT, ctx),
+            generateKey: (_ctx, tracker, name) => `${name}:${tracker}`,
+          },
+        ],
+      }),
       inject: [AppConfig],
     }),
   ],

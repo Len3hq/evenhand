@@ -1,6 +1,6 @@
 /**
  * Rate limits (decision 55): exports, judge writes and failed sign-ins each have their own
- * per-address limit, and every refusal is audited once a minute for admins. Each test starts
+ * limit, counted per credential (per address for anonymous callers), and every refusal is audited once a minute for admins. Each test starts
  * an app with one limit set low; the rest of the suite runs with limits out of the way.
  */
 import { bearer, createTestApp, type TestApp, TOKENS, tokenFor } from './helpers.js';
@@ -79,26 +79,34 @@ describe('the judge write limit', () => {
 });
 
 describe('failed sign-ins', () => {
-  it('locks an address out for the minute after too many bad tokens, valid ones included', async () => {
+  it('refuses further bad tokens from an address for the minute, but never a valid one', async () => {
     const t = await app({ authFailuresPerMin: 3 });
-    for (let i = 0; i < 3; i++) {
-      expect(
-        (
-          await t
-            .http()
-            .get('/api/auth/me')
-            .set(bearer(`guess-${i}`))
-        ).status,
-      ).toBe(401);
-    }
-    const locked = await t.http().get('/api/auth/me').set(organizer);
+    const guess = async (i: number) =>
+      t
+        .http()
+        .get('/api/auth/me')
+        .set(bearer(`guess-${i}`));
+    for (let i = 0; i < 3; i++) expect((await guess(i)).status).toBe(401);
+    const locked = await guess(3);
     expect(locked.status).toBe(429);
     expect(locked.body.message).toMatch(/Too many failed sign-in attempts/);
-    // Public pages stay open.
+    // Behind the bundled proxy every visitor shares one address: someone guessing tokens must
+    // not lock everyone else out, so a valid credential still gets through.
+    expect((await t.http().get('/api/auth/me').set(organizer)).status).toBe(200);
     expect((await t.http().get('/api/projects')).status).toBe(200);
-    // Read from the database: this address is locked out of the API for the minute, admin too.
+    expect((await guess(4)).status).toBe(429);
     const rows = await t.prisma.auditLog.findMany({ where: { action: 'request.rate_limited' } });
     expect(rows.some((r) => (r.after as { limit?: string }).limit === 'auth-failures')).toBe(true);
+  });
+
+  it('counts limits per credential, so callers sharing an address do not share a bucket', async () => {
+    const t = await app({ rateLimitExportPerMin: 2 });
+    const admin = bearer(await tokenFor(t.prisma, 'admin@evenhand.local', 'security-admin'));
+    const csv = '/api/events/evt_01/export/teams.csv';
+    for (let i = 0; i < 2; i++) expect((await t.http().get(csv).set(organizer)).status).toBe(200);
+    expect((await t.http().get(csv).set(organizer)).status).toBe(429);
+    // Same address (127.0.0.1), different credential: its own allowance.
+    expect((await t.http().get(csv).set(admin)).status).toBe(200);
   });
 
   it('does not count a stale cookie on public pages as a guess', async () => {
