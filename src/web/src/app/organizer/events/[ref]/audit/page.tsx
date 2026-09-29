@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { AuditList } from '@/components/audit/audit-list';
+import { ChainStatus } from '@/components/audit/chain-status';
 import { Button, ErrorState, Input, Label } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
 import type { Schemas } from '@/lib/api/types';
@@ -78,6 +79,7 @@ export default async function AuditPage({
             Everything that changed in this event, newest first. Entries cannot be edited or
             deleted.
           </p>
+          <ChainStatus />
         </div>
         <a
           href={`/api/events/${event.slug}/export/audit.csv`}

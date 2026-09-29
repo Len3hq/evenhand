@@ -31,6 +31,7 @@ import { AppConfig } from '../core/config.js';
 import { CoreModule } from '../core/core.module.js';
 import { PrismaService } from '../core/prisma.service.js';
 import { eventByRef } from '../core/refs.js';
+import { AuditChainService } from '../modules/audit/audit-chain.service.js';
 import { EventExportService } from '../modules/transfer/event-export.service.js';
 import { TransferModule } from '../modules/transfer/transfer.module.js';
 import { SeedModule } from '../seed/seed.module.js';
@@ -51,7 +52,8 @@ const USAGE = `usage:
   cli import <file.json>
   cli tokens create <email> --label <label>
   cli tokens list [<email>]
-  cli tokens revoke <id> | --demo`;
+  cli tokens revoke <id> | --demo
+  cli verify-audit                 check the audit log's hash chain (exit 1 if broken)`;
 
 async function seed(args: string[]): Promise<void> {
   const flag = args.indexOf('--fixtures');
@@ -168,6 +170,27 @@ async function importFile(args: string[]): Promise<void> {
   }
 }
 
+async function verifyAudit(): Promise<void> {
+  const ctx = await NestFactory.createApplicationContext(CoreModule, { logger: ['error'] });
+  try {
+    const chain = await new AuditChainService(ctx.get(PrismaService), ctx.get(Clock)).check();
+    const lines = [
+      chain.intact ? 'audit chain: INTACT' : 'audit chain: BROKEN',
+      `  entries ${chain.entries}, linked ${chain.linked}, head ${chain.head}`,
+    ];
+    if (chain.alteredCount)
+      lines.push(`  edited (${chain.alteredCount}): ${chain.altered.join(', ')}`);
+    if (chain.brokenCount)
+      lines.push(`  after a gap (${chain.brokenCount}): ${chain.broken.join(', ')}`);
+    if (!chain.headMatches)
+      lines.push('  the chain does not end at the recorded head: newest entries removed');
+    process.stdout.write(`${lines.join('\n')}\n`);
+    if (!chain.intact) process.exitCode = 1;
+  } finally {
+    await ctx.close();
+  }
+}
+
 async function tokens(args: string[]): Promise<void> {
   const [sub, ...rest] = args;
   const ctx = await NestFactory.createApplicationContext(CoreModule, { logger: ['error'] });
@@ -250,6 +273,9 @@ try {
       break;
     case 'tokens':
       await tokens(args);
+      break;
+    case 'verify-audit':
+      await verifyAudit();
       break;
     default:
       process.stderr.write(`${USAGE}\n`);

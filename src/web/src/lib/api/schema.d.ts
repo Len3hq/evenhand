@@ -613,6 +613,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/audit/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Checks the audit log's hash chain: no entry edited, none deleted, nothing cut off the end.
+         *     Admins also get the ids of affected entries. Organisers of any event and admins.
+         */
+        get: operations["AuditLogController_verify"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events/{eventRef}/audit": {
         parameters: {
             query?: never;
@@ -1986,6 +2006,25 @@ export interface components {
             expiresAt: string;
             usesLeft: number;
         };
+        AuditChainDto: {
+            /** @description True when every entry's hash matches its content, every link holds, and the chain ends at the recorded head. */
+            intact: boolean;
+            entries: number;
+            /** @description Entries reached by walking the chain from the first one. Fewer than `entries` means a gap. */
+            linked: number;
+            /** @description The hash of the newest entry, as recorded by the database. Note it down to detect later truncation. */
+            head: string;
+            /** @description False when the walk ends somewhere other than the recorded head (newest entries removed). */
+            headMatches: boolean;
+            /** @description Ids of entries whose content no longer matches their hash (edited). Admins only; empty for organisers. */
+            altered: string[];
+            /** @description Ids of entries whose predecessor is missing (something before them was deleted). Admins only. */
+            broken: string[];
+            /** @description Counts of the two lists above, for everyone. */
+            alteredCount: number;
+            brokenCount: number;
+            checkedAt: string;
+        };
         AuditActorDto: {
             id: string;
             name: string;
@@ -2107,6 +2146,17 @@ export interface components {
             /** @description Why the normalized score differs from the raw mean, in one line. */
             reason: string;
         };
+        PendingDuplicateDto: {
+            flagId: string;
+            /** @enum {string} */
+            reason: "SAME_TEAM" | "SAME_REPO" | "SAME_TITLE";
+            /** @description The newer entry (kept if confirmed). */
+            kept: string;
+            /** @description The older entry. While held (same team), it is out of judging and its reviews are not ranked. */
+            held: string;
+            /** @description Final reviews of the older entry that this run could not use. */
+            heldOutReviews: number;
+        };
         RankingParamsDto: {
             method: string;
             weights: {
@@ -2122,6 +2172,12 @@ export interface components {
             reviews: number;
             /** @description Projects in judging with no final review; not in the ranking. */
             unreviewed: string[];
+            /**
+             * @description Duplicates not yet decided when the run was made. A run can be computed with some pending,
+             *     but not published (409 `duplicates_pending`): decide them on the entries page first.
+             *     Absent on runs made before this was recorded.
+             */
+            pendingDuplicates?: components["schemas"]["PendingDuplicateDto"][];
         };
         RankingDto: {
             rows: components["schemas"]["RankingRowDto"][];
@@ -3361,6 +3417,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TeamDto"];
+                };
+            };
+        };
+    };
+    AuditLogController_verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditChainDto"];
                 };
             };
         };

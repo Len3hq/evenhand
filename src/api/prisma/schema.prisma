@@ -560,6 +560,12 @@ model AuditLog {
   before     Json?
   after      Json?
   ip         String?
+  /// Hash chain, filled by the database on insert (trigger audit_log_chain, migration
+  /// *_audit_hash_chain); never set by the application. `prev_hash` is the previous entry's
+  /// `hash` (64 zeros for the first); `hash` is SHA-256 of this entry's canonical JSON,
+  /// prev_hash included. Both unique: a second entry claiming the same predecessor is a fork.
+  prevHash   String?  @unique @map("prev_hash")
+  hash       String?  @unique
 
   /// RESTRICT, not SET NULL: a cascade would UPDATE audit rows, which the trigger forbids.
   /// Users and events with audit history are therefore never hard-deleted.
@@ -681,4 +687,13 @@ model Vote {
   @@id([ballotId, submissionId])
   @@index([submissionId])
   @@map("votes")
+}
+
+/// The audit chain's head (one row, id = 1): the newest entry's hash. Maintained only by the
+/// audit_log_chain trigger; the application reads it, never writes it.
+model AuditChainHead {
+  id   Int    @id @default(1)
+  hash String
+
+  @@map("audit_chain_head")
 }

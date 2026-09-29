@@ -4,13 +4,31 @@ import type { Response } from 'express';
 import type { Actor } from '../../core/auth/actor.js';
 import { CurrentActor, ExportRateLimit } from '../../core/auth/decorators.js';
 import { sendCsv } from '../../core/csv.js';
+import { AuditChainService } from './audit-chain.service.js';
 import { AuditLogService } from './audit-log.service.js';
-import { AuditPageDto, AuditQueryDto, PlatformAuditPageDto } from './dto/audit.dto.js';
+import {
+  AuditChainDto,
+  AuditPageDto,
+  AuditQueryDto,
+  PlatformAuditPageDto,
+} from './dto/audit.dto.js';
 
 @ApiTags('audit')
 @Controller()
 export class AuditLogController {
-  constructor(private readonly audit: AuditLogService) {}
+  constructor(
+    private readonly audit: AuditLogService,
+    private readonly chain: AuditChainService,
+  ) {}
+
+  /**
+   * Checks the audit log's hash chain: no entry edited, none deleted, nothing cut off the end.
+   * Admins also get the ids of affected entries. Organisers of any event and admins.
+   */
+  @Get('audit/verify')
+  verify(@CurrentActor() actor: Actor): Promise<AuditChainDto> {
+    return this.chain.verify(actor);
+  }
 
   /**
    * Everything that happened in an event, newest first, each entry with a readable summary.

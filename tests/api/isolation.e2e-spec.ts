@@ -501,6 +501,20 @@ const matrix: {
     },
   },
   {
+    name: 'verify the audit hash chain (organisers and admins)',
+    method: 'get',
+    path: '/api/audit/verify',
+    expect: {
+      anon: 401,
+      participant: 403,
+      judge_a: 403,
+      judge_b: 403,
+      organizer: 200,
+      admin: 200,
+      otherOrganizer: 200,
+    },
+  },
+  {
     name: 'my own teams (any logged-in user; only ever their own)',
     method: 'get',
     path: '/api/me/teams',

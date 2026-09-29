@@ -1476,6 +1476,28 @@
         ]
       }
     },
+    "/api/audit/verify": {
+      "get": {
+        "operationId": "AuditLogController_verify",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditChainDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Checks the audit log's hash chain: no entry edited, none deleted, nothing cut off the end.\nAdmins also get the ids of affected entries. Organisers of any event and admins.",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
     "/api/events/{eventRef}/audit": {
       "get": {
         "operationId": "AuditLogController_forEvent",
@@ -5310,6 +5332,66 @@
           "usesLeft"
         ]
       },
+      "AuditChainDto": {
+        "type": "object",
+        "properties": {
+          "intact": {
+            "type": "boolean",
+            "description": "True when every entry's hash matches its content, every link holds, and the chain ends at the recorded head."
+          },
+          "entries": {
+            "type": "number"
+          },
+          "linked": {
+            "type": "number",
+            "description": "Entries reached by walking the chain from the first one. Fewer than `entries` means a gap."
+          },
+          "head": {
+            "type": "string",
+            "description": "The hash of the newest entry, as recorded by the database. Note it down to detect later truncation."
+          },
+          "headMatches": {
+            "type": "boolean",
+            "description": "False when the walk ends somewhere other than the recorded head (newest entries removed)."
+          },
+          "altered": {
+            "description": "Ids of entries whose content no longer matches their hash (edited). Admins only; empty for organisers.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "broken": {
+            "description": "Ids of entries whose predecessor is missing (something before them was deleted). Admins only.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "alteredCount": {
+            "type": "number",
+            "description": "Counts of the two lists above, for everyone."
+          },
+          "brokenCount": {
+            "type": "number"
+          },
+          "checkedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "intact",
+          "entries",
+          "linked",
+          "head",
+          "headMatches",
+          "altered",
+          "broken",
+          "alteredCount",
+          "brokenCount",
+          "checkedAt"
+        ]
+      },
       "AuditActorDto": {
         "type": "object",
         "properties": {
@@ -5769,6 +5851,41 @@
           "reason"
         ]
       },
+      "PendingDuplicateDto": {
+        "type": "object",
+        "properties": {
+          "flagId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "SAME_TEAM",
+              "SAME_REPO",
+              "SAME_TITLE"
+            ]
+          },
+          "kept": {
+            "type": "string",
+            "description": "The newer entry (kept if confirmed)."
+          },
+          "held": {
+            "type": "string",
+            "description": "The older entry. While held (same team), it is out of judging and its reviews are not ranked."
+          },
+          "heldOutReviews": {
+            "type": "number",
+            "description": "Final reviews of the older entry that this run could not use."
+          }
+        },
+        "required": [
+          "flagId",
+          "reason",
+          "kept",
+          "held",
+          "heldOutReviews"
+        ]
+      },
       "RankingParamsDto": {
         "type": "object",
         "properties": {
@@ -5806,6 +5923,13 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "pendingDuplicates": {
+            "description": "Duplicates not yet decided when the run was made. A run can be computed with some pending,\nbut not published (409 `duplicates_pending`): decide them on the entries page first.\nAbsent on runs made before this was recorded.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PendingDuplicateDto"
             }
           }
         },

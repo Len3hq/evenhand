@@ -65,3 +65,24 @@ export class PlatformAuditPageDto {
   pageSize: number;
   total: number;
 }
+
+/** The result of checking the audit log's hash chain (GET /api/audit/verify). */
+export class AuditChainDto {
+  /** True when every entry's hash matches its content, every link holds, and the chain ends at the recorded head. */
+  intact: boolean;
+  entries: number;
+  /** Entries reached by walking the chain from the first one. Fewer than `entries` means a gap. */
+  linked: number;
+  /** The hash of the newest entry, as recorded by the database. Note it down to detect later truncation. */
+  head: string;
+  /** False when the walk ends somewhere other than the recorded head (newest entries removed). */
+  headMatches: boolean;
+  /** Ids of entries whose content no longer matches their hash (edited). Admins only; empty for organisers. */
+  altered: string[];
+  /** Ids of entries whose predecessor is missing (something before them was deleted). Admins only. */
+  broken: string[];
+  /** Counts of the two lists above, for everyone. */
+  alteredCount: number;
+  brokenCount: number;
+  checkedAt: string;
+}

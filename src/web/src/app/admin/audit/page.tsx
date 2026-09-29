@@ -4,6 +4,7 @@ import { Button, ErrorState, Input, Label } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
 import type { Schemas } from '@/lib/api/types';
 import { requireLogin } from '@/lib/session';
+import { ChainStatus } from '@/components/audit/chain-status';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Platform audit trail' };
@@ -68,6 +69,7 @@ export default async function PlatformAuditPage({ searchParams }: PageProps<'/ad
         each came from. Entries cannot be edited or deleted. Each event&apos;s own trail is on its
         organiser page.
       </p>
+      <ChainStatus />
 
       <form method="get" className="mt-6 flex flex-wrap items-end gap-3">
         <div>
