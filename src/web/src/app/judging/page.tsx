@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Badge, Card, EmptyState } from '@/components/ui';
+import { Badge, ButtonLink, Card, EmptyState } from '@/components/ui';
 import { apiGet } from '@/lib/api/server';
 import type { Schemas } from '@/lib/api/types';
 import { formatUtc } from '@/lib/dates';
@@ -27,11 +27,11 @@ export default async function JudgingPage() {
 
   return (
     <section className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Judging</h1>
-        <p className="text-sm text-muted">
-          You see and score only the projects assigned to you, and never another judge&apos;s
-          scores. Drafts save as you go; a submitted review is final.
+      <div className="space-y-1">
+        <h1 className="text-3xl font-bold tracking-tight">Judging</h1>
+        <p className="max-w-2xl text-muted">
+          Your projects, in order. Drafts save as you go; a submitted review is final. You never see
+          another judge&apos;s scores.
         </p>
       </div>
 
@@ -50,7 +50,7 @@ export default async function JudgingPage() {
           return (
             <Card key={e.eventId}>
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
+                <div className="space-y-0.5">
                   <h2 className="text-lg font-semibold">{e.eventName}</h2>
                   <p className="text-sm text-muted">
                     {e.finished} of {e.assigned} submitted ·{' '}
@@ -60,32 +60,36 @@ export default async function JudgingPage() {
                   </p>
                 </div>
                 {next && e.judgingOpen ? (
-                  <Link
-                    href={`/judging/${next.assignmentId}`}
-                    className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-fg"
-                  >
+                  <ButtonLink href={`/judging/${next.assignmentId}`}>
                     {next.state === 'NOT_STARTED' && e.finished === 0 ? 'Start' : 'Continue'}
-                  </Link>
+                  </ButtonLink>
                 ) : null}
               </div>
               <div
-                className="mt-3 h-2 overflow-hidden rounded bg-bg"
+                className="mt-4 h-1.5 overflow-hidden rounded-full bg-bg"
                 role="progressbar"
                 aria-label={`${e.eventName}: ${e.finished} of ${e.assigned} submitted`}
                 aria-valuemin={0}
                 aria-valuemax={e.assigned}
                 aria-valuenow={e.finished}
               >
-                <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
+                <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
               </div>
-              <ol className="mt-4 divide-y divide-border text-sm">
+              <ol className="-mx-2 mt-4 text-sm">
                 {e.items.map((i) => (
-                  <li key={i.assignmentId} className="flex items-center justify-between gap-2 py-2">
-                    <Link href={`/judging/${i.assignmentId}`} className="hover:underline">
-                      <span className="mr-2 text-muted tabular-nums">{i.position + 1}.</span>
-                      {i.title}
+                  <li key={i.assignmentId}>
+                    <Link
+                      href={`/judging/${i.assignmentId}`}
+                      className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-bg"
+                    >
+                      <span className="min-w-0 truncate">
+                        <span className="mr-3 font-mono text-xs text-muted">
+                          {String(i.position + 1).padStart(2, '0')}
+                        </span>
+                        {i.title}
+                      </span>
+                      <Badge tone={STATE[i.state].tone}>{STATE[i.state].label}</Badge>
                     </Link>
-                    <Badge tone={STATE[i.state].tone}>{STATE[i.state].label}</Badge>
                   </li>
                 ))}
               </ol>

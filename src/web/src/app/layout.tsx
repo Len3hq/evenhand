@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { NavLink } from '@/components/nav/nav-link';
 import { UserNav } from '@/components/nav/user-nav';
 import { currentUser } from '@/lib/session';
 // Bundled fonts (SIL OFL 1.1): installed with npm and served from the portal's own origin, never
@@ -45,17 +46,21 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
         <header className="sticky top-0 z-20 border-b border-border bg-surface/90 backdrop-blur">
           <nav
             aria-label="Main"
-            className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3"
+            className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3"
           >
-            <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+            <Link
+              href="/"
+              className="mr-2 flex items-center gap-2 font-display text-lg font-bold tracking-tight"
+            >
               <Logo />
               Evenhand
             </Link>
-            <Link href="/projects" className="text-sm text-muted hover:text-fg">
-              Gallery
-            </Link>
+            <NavLink href="/projects">Gallery</NavLink>
             {/* A plain link: /api/docs is served by the API, not a Next.js page. */}
-            <a href="/api/docs" className="text-sm text-muted hover:text-fg">
+            <a
+              href="/api/docs"
+              className="whitespace-nowrap rounded-full px-2.5 py-1 text-sm text-muted hover:text-fg"
+            >
               API
             </a>
             <UserNav me={me} />
@@ -64,8 +69,18 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
         <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
           {children}
         </main>
-        <footer className="border-t border-border py-4 text-center text-xs text-muted">
-          Evenhand · MIT licensed · runs entirely on your own machine
+        <footer className="border-t border-border bg-surface/60">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-4 font-mono text-[11px] text-muted">
+            <span>Evenhand · MIT licensed · runs entirely on your own machine</span>
+            <span className="flex gap-4">
+              <Link href="/projects" className="hover:text-fg">
+                Gallery
+              </Link>
+              <a href="/api/docs" className="hover:text-fg">
+                API docs
+              </a>
+            </span>
+          </div>
         </footer>
       </body>
     </html>

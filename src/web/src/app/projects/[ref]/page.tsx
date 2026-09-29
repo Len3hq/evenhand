@@ -23,10 +23,12 @@ export default async function ProjectPage({ params }: PageProps<'/projects/[ref]
     );
   }
 
-  // The rubric is public: show how this project is judged (nothing if it cannot be loaded).
-  const rubric = await apiGet<Schemas['RubricDto']>(
-    `/api/events/${project.eventId}/criteria`,
-  ).catch(() => null);
+  // The rubric and the event are public: show how this project is judged and where it was
+  // entered (nothing for either if it cannot be loaded).
+  const [rubric, event] = await Promise.all([
+    apiGet<Schemas['RubricDto']>(`/api/events/${project.eventId}/criteria`).catch(() => null),
+    apiGet<Schemas['EventDto']>(`/api/events/${project.eventId}`).catch(() => null),
+  ]);
 
   const links = [
     ['Repository', project.repoUrl],
@@ -37,14 +39,27 @@ export default async function ProjectPage({ params }: PageProps<'/projects/[ref]
 
   return (
     <article className="space-y-6">
-      <Link href="/projects" className="text-sm text-muted hover:text-fg">
-        ← Gallery
-      </Link>
+      <nav
+        aria-label="Breadcrumb"
+        className="flex flex-wrap items-center gap-x-2 text-sm text-muted"
+      >
+        <Link href="/projects" className="hover:text-fg">
+          ← Gallery
+        </Link>
+        {event ? (
+          <>
+            <span aria-hidden="true">/</span>
+            <Link href={`/projects?event=${event.slug}`} className="hover:text-fg">
+              {event.name}
+            </Link>
+          </>
+        ) : null}
+      </nav>
       <header className="flex items-start gap-4">
         {/* The initials tile stands in for a cover image; with images, the cover shows below. */}
         {project.images.length ? null : <ProjectTile title={project.title} size="lg" />}
         <div className="min-w-0">
-          <h1 className="text-3xl font-semibold tracking-tight">{project.title}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-balance">{project.title}</h1>
           {project.tagline ? <p className="mt-1 text-lg text-muted">{project.tagline}</p> : null}
           <div className="mt-3 flex flex-wrap gap-2">
             {project.track ? <Badge tone="accent">{project.track.name}</Badge> : null}
@@ -67,6 +82,18 @@ export default async function ProjectPage({ params }: PageProps<'/projects/[ref]
         </div>
 
         <aside className="space-y-4">
+          {/* Only once the organisers publish: results are hidden until then. */}
+          {event?.resultsPublishedAt ? (
+            <Card className="border-accent/40">
+              <p className="text-sm">Results for {event.name} are published.</p>
+              <Link
+                href={`/events/${event.slug}/results`}
+                className="mt-2 inline-block text-sm font-medium text-accent underline underline-offset-4"
+              >
+                See the ranking →
+              </Link>
+            </Card>
+          ) : null}
           {present.length ? (
             <Card>
               <ul className="space-y-2 text-sm">

@@ -5,10 +5,18 @@
  * The look: pill buttons, quiet cards on a faint grid, and the mono font for small technical
  * text (badges, labels, figures). Colours only from the tokens in app/globals.css.
  */
+import Link from 'next/link';
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
 
 const cx = (...classes: (string | false | null | undefined)[]): string =>
   classes.filter(Boolean).join(' ');
+
+const BUTTON_BASE =
+  'inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent';
+const BUTTON_VARIANT = {
+  primary: 'bg-accent text-accent-fg hover:opacity-90',
+  secondary: 'border border-border bg-surface text-fg hover:border-accent',
+} as const;
 
 export function Button({
   variant = 'primary',
@@ -18,16 +26,35 @@ export function Button({
   return (
     <button
       className={cx(
-        'inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold',
-        'transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+        BUTTON_BASE,
         'disabled:cursor-not-allowed disabled:opacity-50',
-        variant === 'primary'
-          ? 'bg-accent text-accent-fg hover:opacity-90'
-          : 'border border-border bg-surface text-fg hover:border-accent',
+        BUTTON_VARIANT[variant],
         className,
       )}
       {...props}
     />
+  );
+}
+
+/**
+ * A link that looks like a button: for navigation that is the main action on a page ("Browse
+ * the gallery", "Continue judging"). Use Button for actions that change something.
+ */
+export function ButtonLink({
+  href,
+  variant = 'primary',
+  className,
+  children,
+}: {
+  href: string;
+  variant?: keyof typeof BUTTON_VARIANT;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Link href={href} className={cx(BUTTON_BASE, BUTTON_VARIANT[variant], className)}>
+      {children}
+    </Link>
   );
 }
 

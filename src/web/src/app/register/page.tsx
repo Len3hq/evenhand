@@ -33,12 +33,15 @@ export default function RegisterPage() {
   }
 
   return (
-    <section className="mx-auto max-w-sm">
-      <h1 className="text-2xl font-semibold">Create an account</h1>
+    <section className="mx-auto max-w-md pt-4">
+      <h1 className="text-3xl font-bold tracking-tight">Create an account</h1>
       <p className="mt-1 text-sm text-muted">
         Then create a team, or join one with the invite link a teammate sends you.
       </p>
-      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+      <form
+        onSubmit={onSubmit}
+        className="mt-6 space-y-4 rounded-xl border border-border bg-surface p-5 shadow-sm"
+      >
         <div>
           <Label htmlFor="name">Name</Label>
           <Input id="name" name="name" autoComplete="name" required maxLength={120} />

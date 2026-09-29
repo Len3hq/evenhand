@@ -31,13 +31,16 @@ export default function LoginPage() {
   }
 
   return (
-    <section className="mx-auto max-w-sm">
-      <h1 className="text-2xl font-semibold">Log in</h1>
+    <section className="mx-auto max-w-md pt-4">
+      <h1 className="text-3xl font-bold tracking-tight">Log in</h1>
       <p className="mt-1 text-sm text-muted">
         Demo accounts are printed by <code>docker compose up</code> (password{' '}
         <code>evenhand-demo</code>).
       </p>
-      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+      <form
+        onSubmit={onSubmit}
+        className="mt-6 space-y-4 rounded-xl border border-border bg-surface p-5 shadow-sm"
+      >
         <div>
           <Label htmlFor="email">Email</Label>
           <Input id="email" name="email" type="email" autoComplete="username" required />

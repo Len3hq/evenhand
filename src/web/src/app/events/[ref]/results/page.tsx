@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ResultsTable } from '@/components/results/results-table';
-import { EmptyState, ErrorState } from '@/components/ui';
+import { EmptyState, ErrorState, Eyebrow } from '@/components/ui';
 import { ApiError, apiGet } from '@/lib/api/server';
 import type { Schemas } from '@/lib/api/types';
 import { formatUtc } from '@/lib/dates';
@@ -37,18 +37,32 @@ export default async function ResultsPage({ params }: PageProps<'/events/[ref]/r
   }
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">{results.eventName}: results</h1>
-      <p className="max-w-3xl text-sm text-muted">
-        Published {formatUtc(results.publishedAt)}. Each project&apos;s score is corrected for how
-        generous its judges were. Projects in the same group ({results.tieGroups} group
-        {results.tieGroups === 1 ? '' : 's'}) cannot be told apart by the reviews, so read ranks
-        inside a group as equal.
-      </p>
+    <section className="space-y-6">
+      <div className="space-y-2">
+        <Eyebrow>Published results</Eyebrow>
+        <h1 className="text-3xl font-bold tracking-tight">{results.eventName}: results</h1>
+        <p className="max-w-3xl text-muted">
+          Each project&apos;s score is corrected for how generous its judges were. Projects in the
+          same group ({results.tieGroups} group{results.tieGroups === 1 ? '' : 's'}) cannot be told
+          apart by the reviews, so read ranks inside a group as equal.
+        </p>
+        <p className="font-mono text-xs text-muted">
+          Published {formatUtc(results.publishedAt)} · method {results.method}
+        </p>
+      </div>
       <ResultsTable rows={results.rows} showReasons={false} />
-      <p className="font-mono text-xs break-all text-muted">
-        Method {results.method} · inputs {results.inputsHash} · result {results.outputHash}
-      </p>
+      <details className="rounded-xl border border-border bg-surface p-4 text-sm">
+        <summary className="cursor-pointer font-medium">Check these results</summary>
+        <p className="mt-2 text-muted">
+          The ranking records a SHA-256 hash of its inputs (every final review and the rubric) and
+          of its result. Anyone with the event&apos;s exports can recompute them.
+        </p>
+        <p className="mt-2 font-mono text-xs break-all text-muted">
+          inputs {results.inputsHash}
+          <br />
+          result {results.outputHash}
+        </p>
+      </details>
     </section>
   );
 }

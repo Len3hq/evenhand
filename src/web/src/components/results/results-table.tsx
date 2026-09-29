@@ -65,13 +65,22 @@ export function ResultsTable({ rows, showReasons }: { rows: Row[]; showReasons: 
             </tr>
           </thead>
           <tbody>
-            {ranked.map((r) => (
+            {ranked.map((r, i) => (
               <tr
                 key={r.projectId}
-                className={`border-t border-border ${(r.tieGroup ?? 0) % 2 ? '' : 'bg-bg/60'}`}
+                className={`${
+                  // A heavier rule where a new tie group starts; groups alternate in tint.
+                  i > 0 && ranked[i - 1]!.tieGroup !== r.tieGroup
+                    ? 'border-t-2 border-accent/50'
+                    : 'border-t border-border'
+                } ${(r.tieGroup ?? 0) % 2 ? 'bg-accent-soft/40' : ''}`}
               >
                 <td className="px-3 py-1.5 font-semibold tabular-nums">{r.rank}</td>
-                <td className="px-3 tabular-nums text-muted">{r.tieGroup}</td>
+                <td className="px-3">
+                  <span className="rounded-full border border-border px-1.5 py-0.5 font-mono text-[11px] text-muted">
+                    G{r.tieGroup}
+                  </span>
+                </td>
                 <td className="px-3">
                   <span className="font-medium">{r.title}</span>{' '}
                   <span className="text-muted">· {r.teamName}</span>
